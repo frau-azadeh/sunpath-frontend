@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prettier:check": "prettier --check .",
+    "prettier:fix": "prettier --write ."
   },
   "dependencies": {
     "@microsoft/signalr": "^10.0.11",
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
