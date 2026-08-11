@@ -1,3 +1,3 @@
 window.CONFIG = {
-  NEXT_PUBLIC_API_BASE: 'http://192.168.1.137:5000',
+  NEXT_PUBLIC_API_BASE: 'https://localhost:44341',
 };

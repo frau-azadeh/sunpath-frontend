@@ -1,28 +1,35 @@
-// src/components/providers/SignalRProvider.tsx
 'use client';
 
 import { useEffect } from 'react';
 
 import { signalRService } from '@/services/signalrService';
+import { useVehicleStore } from '@/store/useVehicleStore';
 
 export default function SignalRProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+
   useEffect(() => {
-    // یک وقفه بسیار کوتاه (یا چک کردن موجود بودن کانفیگ)
-    const initSignalR = () => {
-      if (window.CONFIG) {
+    let isMounted = true;
+
+    const init = async () => {
+      await loadVehicles();
+
+      if (isMounted) {
         signalRService.startConnection();
-      } else {
-        // اگر هنوز لود نشده، یک لحظه صبر کن و دوباره چک کن
-        setTimeout(initSignalR, 100);
       }
     };
 
-    initSignalR();
-  }, []);
+    init();
+
+    return () => {
+      isMounted = false;
+      void signalRService.stopConnection();
+    };
+  }, [loadVehicles]);
 
   return <>{children}</>;
 }
