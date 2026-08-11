@@ -42,9 +42,7 @@ class SignalRService {
     const apiBaseUrl = window.CONFIG?.NEXT_PUBLIC_API_BASE?.trim();
 
     if (!apiBaseUrl) {
-      console.error(
-        '[SignalR] Missing window.CONFIG.NEXT_PUBLIC_API_BASE.',
-      );
+      console.error('[SignalR] Missing window.CONFIG.NEXT_PUBLIC_API_BASE.');
 
       return null;
     }
@@ -152,88 +150,58 @@ class SignalRService {
   /**
    * تمام Event Handlerهای SignalR را ثبت می‌کند.
    */
-  private registerHandlers(
-    connection: signalR.HubConnection,
-  ): void {
-    connection.on(
-      this.eventName,
-      (data: VehiclePositionPayload) => {
-        console.log(
-          `[SignalR] ${this.eventName} received:`,
-          data,
+  private registerHandlers(connection: signalR.HubConnection): void {
+    connection.on(this.eventName, (data: VehiclePositionPayload) => {
+      console.log(`[SignalR] ${this.eventName} received:`, data);
+
+      const rawVehicleId = data.id ?? data.vehicleId;
+
+      const rawLatitude = data.latitude ?? data.lat;
+
+      const rawLongitude = data.longitude ?? data.lng ?? data.lon;
+
+      const vehicleId = Number(rawVehicleId);
+      const latitude = Number(rawLatitude);
+      const longitude = Number(rawLongitude);
+      const speed = Number(data.speed ?? 0);
+      const heading = Number(data.heading ?? 0);
+
+      if (!Number.isFinite(vehicleId)) {
+        console.warn('[SignalR] Invalid vehicle id:', data);
+
+        return;
+      }
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        console.warn('[SignalR] Invalid vehicle coordinates:', data);
+
+        return;
+      }
+
+      useVehicleStore
+        .getState()
+        .updateVehiclePosition(
+          vehicleId,
+          latitude,
+          longitude,
+          Number.isFinite(speed) ? speed : 0,
+          Number.isFinite(heading) ? heading : 0,
         );
-
-        const rawVehicleId = data.id ?? data.vehicleId;
-
-        const rawLatitude =
-          data.latitude ?? data.lat;
-
-        const rawLongitude =
-          data.longitude ?? data.lng ?? data.lon;
-
-        const vehicleId = Number(rawVehicleId);
-        const latitude = Number(rawLatitude);
-        const longitude = Number(rawLongitude);
-        const speed = Number(data.speed ?? 0);
-        const heading = Number(data.heading ?? 0);
-
-        if (!Number.isFinite(vehicleId)) {
-          console.warn(
-            '[SignalR] Invalid vehicle id:',
-            data,
-          );
-
-          return;
-        }
-
-        if (
-          !Number.isFinite(latitude) ||
-          !Number.isFinite(longitude)
-        ) {
-          console.warn(
-            '[SignalR] Invalid vehicle coordinates:',
-            data,
-          );
-
-          return;
-        }
-
-        useVehicleStore
-          .getState()
-          .updateVehiclePosition(
-            vehicleId,
-            latitude,
-            longitude,
-            Number.isFinite(speed) ? speed : 0,
-            Number.isFinite(heading) ? heading : 0,
-          );
-      },
-    );
+    });
 
     connection.onreconnecting((error) => {
-      console.warn(
-        '[SignalR] Reconnecting...',
-        error,
-      );
+      console.warn('[SignalR] Reconnecting...', error);
     });
 
     connection.onreconnected((connectionId) => {
-      console.log(
-        '[SignalR] Reconnected successfully:',
-        connectionId,
-      );
+      console.log('[SignalR] Reconnected successfully:', connectionId);
     });
 
     connection.onclose((error) => {
       if (error) {
-        console.error(
-          '[SignalR] Connection closed with error:',
-          error,
-        );
+        console.error('[SignalR] Connection closed with error:', error);
       } else {
-        console.log(
-          '[SignalR] Connection closed.',
-        );
+        console.log('[SignalR] Connection closed.');
       }
 
       if (this.connection === connection) {
@@ -272,9 +240,7 @@ class SignalRService {
     const connection = this.connection;
 
     if (!connection) {
-      console.log(
-        '[SignalR] No active connection to stop.',
-      );
+      console.log('[SignalR] No active connection to stop.');
 
       return;
     }
@@ -288,9 +254,7 @@ class SignalRService {
      * را جلوگیری می‌کند.
      */
     if (this.startPromise) {
-      console.log(
-        '[SignalR] Waiting for negotiation before stopping...',
-      );
+      console.log('[SignalR] Waiting for negotiation before stopping...');
 
       try {
         await this.startPromise;
@@ -309,14 +273,10 @@ class SignalRService {
 
     const state = connection.state;
 
-    if (
-      state === signalR.HubConnectionState.Disconnected
-    ) {
+    if (state === signalR.HubConnectionState.Disconnected) {
       this.connection = null;
 
-      console.log(
-        '[SignalR] Connection is already disconnected.',
-      );
+      console.log('[SignalR] Connection is already disconnected.');
 
       return;
     }
@@ -324,14 +284,9 @@ class SignalRService {
     try {
       await connection.stop();
 
-      console.log(
-        '[SignalR] Connection stopped manually.',
-      );
+      console.log('[SignalR] Connection stopped manually.');
     } catch (error: unknown) {
-      console.error(
-        '[SignalR] Error while stopping connection:',
-        error,
-      );
+      console.error('[SignalR] Error while stopping connection:', error);
     } finally {
       if (this.connection === connection) {
         this.connection = null;
@@ -342,9 +297,7 @@ class SignalRService {
   /**
    * برای Debug در Console.
    */
-  public getConnectionState():
-    | signalR.HubConnectionState
-    | null {
+  public getConnectionState(): signalR.HubConnectionState | null {
     return this.connection?.state ?? null;
   }
 }
