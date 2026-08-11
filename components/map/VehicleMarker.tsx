@@ -1,67 +1,90 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import L from 'leaflet';
-import { Navigation } from 'lucide-react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Marker, Popup } from 'react-leaflet';
 
-interface Vehicle {
-  id: number | string;
-  latitude: number;
-  longitude: number;
-  heading: number;
-  speed: number;
-  plateNumber?: string;
-}
-
-const createVehicleIcon = (heading: number, speed: number) => {
-  const color = speed > 0 ? '#22c55e' : '#64748b';
-
-  const html = renderToStaticMarkup(
-    <div
-      style={{
-        transform: `rotate(${heading}deg)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: color,
-        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-      }}
-    >
-      <Navigation size={32} fill={color} />
-    </div>,
-  );
-
-  return L.divIcon({
-    html,
-    className: 'custom-vehicle-icon',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-  });
-};
+import { Vehicle } from '@/types/fleet';
 
 interface VehicleMarkerProps {
   vehicle: Vehicle;
 }
 
 export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
+  const latitude = Number(vehicle.latitude);
+  const longitude = Number(vehicle.longitude);
+  const heading = Number(vehicle.heading ?? 0);
+
+  const vehicleIcon = useMemo(() => {
+    const safeHeading = Number.isFinite(heading) ? heading : 0;
+
+    return L.divIcon({
+      className: 'vehicle-marker-container',
+      html: `
+        <div
+          style="
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(${safeHeading}deg);
+            transform-origin: center;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+          "
+        >
+          <div
+            style="
+              width: 36px;
+              height: 36px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 9999px;
+              border: 3px solid white;
+              background: #2563eb;
+              color: white;
+              font-size: 21px;
+              line-height: 1;
+            "
+          >
+            🚚
+          </div>
+        </div>
+      `,
+      iconSize: [46, 46],
+      iconAnchor: [23, 23],
+      popupAnchor: [0, -23],
+    });
+  }, [heading]);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude === 0 ||
+    longitude === 0
+  ) {
+    return null;
+  }
+
   return (
-    <Marker
-      position={[vehicle.latitude, vehicle.longitude]}
-      icon={createVehicleIcon(vehicle.heading, vehicle.speed)}
-    >
+    <Marker position={[latitude, longitude]} icon={vehicleIcon}>
       <Popup>
-        <div className="p-2 font-vazir">
-          <h3 className="font-bold border-b pb-1 mb-1">
-            {vehicle.plateNumber ?? vehicle.id}
-          </h3>
-          <p className="text-sm">
-            سرعت: <span className="text-blue-600">{vehicle.speed} km/h</span>
-          </p>
-          <p className="text-sm">
-            وضعیت: {vehicle.speed > 0 ? 'در حال حرکت' : 'متوقف'}
-          </p>
+        <div dir="rtl" className="min-w-[150px] text-sm">
+          <div className="mb-2 font-bold">
+            {vehicle.plateNumber || `خودرو ${vehicle.id}`}
+          </div>
+
+          <div>سرعت: {Number(vehicle.speed ?? 0)} کیلومتر بر ساعت</div>
+
+          <div>جهت حرکت: {Number(vehicle.heading ?? 0)}°</div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            موقعیت:
+            <br />
+            {latitude.toFixed(5)}, {longitude.toFixed(5)}
+          </div>
         </div>
       </Popup>
     </Marker>
