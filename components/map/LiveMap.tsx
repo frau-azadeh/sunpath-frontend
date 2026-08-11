@@ -3,41 +3,29 @@
 import { useEffect } from 'react';
 
 import L from 'leaflet';
-import {
-  MapContainer,
-  TileLayer,
-  useMap,
-} from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 
 import { signalRService } from '@/services/signalrService';
 import { useVehicleStore } from '@/store/useVehicleStore';
 
 import VehicleMarker from './VehicleMarker';
 
-
-
 if (typeof window !== 'undefined') {
-  const iconPrototype =
-    L.Icon.Default.prototype as unknown as {
-      _getIconUrl?: string;
-    };
+  const iconPrototype = L.Icon.Default.prototype as unknown as {
+    _getIconUrl?: string;
+  };
 
   delete iconPrototype._getIconUrl;
 
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
 
-const TEHRAN_CENTER: [number, number] = [
-  35.6892,
-  51.389,
-];
+const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
 
 function MapResizeHandler() {
   const map = useMap();
@@ -61,21 +49,13 @@ function MapResizeHandler() {
 }
 
 export default function LiveMap() {
-  const vehicles = useVehicleStore(
-    (state) => state.vehicles,
-  );
+  const vehicles = useVehicleStore((state) => state.vehicles);
 
-  const isLoading = useVehicleStore(
-    (state) => state.isLoading,
-  );
+  const isLoading = useVehicleStore((state) => state.isLoading);
 
-  const error = useVehicleStore(
-    (state) => state.error,
-  );
+  const error = useVehicleStore((state) => state.error);
 
-  const loadVehicles = useVehicleStore(
-    (state) => state.loadVehicles,
-  );
+  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
 
   useEffect(() => {
     let isMounted = true;
@@ -127,10 +107,7 @@ export default function LiveMap() {
         />
 
         {validVehicles.map((vehicle) => (
-          <VehicleMarker
-            key={vehicle.id}
-            vehicle={vehicle}
-          />
+          <VehicleMarker key={vehicle.id} vehicle={vehicle} />
         ))}
       </MapContainer>
 
@@ -148,11 +125,7 @@ export default function LiveMap() {
           </span>
         </div>
 
-        {error && (
-          <div className="mt-1 text-xs text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <div className="mt-1 text-xs text-red-600">{error}</div>}
       </div>
     </div>
   );
