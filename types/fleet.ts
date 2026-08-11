@@ -1,7 +1,7 @@
 export interface Vehicle {
   id: number;
   plateNumber: string;
-  status: 'Active' | 'Inactive' | 'Maintenance';
+  status: string;
   latitude: number;
   longitude: number;
   speed: number;
