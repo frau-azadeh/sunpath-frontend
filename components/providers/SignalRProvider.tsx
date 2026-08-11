@@ -2,9 +2,14 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { signalRService } from '@/services/signalrService';
 
-export default function SignalRProvider({ children }: { children: React.ReactNode }) {
+export default function SignalRProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   useEffect(() => {
     // یک وقفه بسیار کوتاه (یا چک کردن موجود بودن کانفیگ)
     const initSignalR = () => {
