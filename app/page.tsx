@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 
 import { LayoutDashboard, Map as MapIcon, Settings, Truck } from 'lucide-react';
 
-import LiveMap from '@/components/map/LiveMapLoader';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
 import { signalRService } from '@/services/signalrService';
 
