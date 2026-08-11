@@ -1,16 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import {
-  LayoutDashboard,
-  Map as MapIcon,
-  Settings,
-  Truck,
-} from 'lucide-react';
+
+import { LayoutDashboard, Map as MapIcon, Settings, Truck } from 'lucide-react';
 
 import LiveMap from '@/components/map/LiveMapLoader';
-import { signalRService } from '@/services/signalrService';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
+import { signalRService } from '@/services/signalrService';
 
 export default function SunPathDashboard() {
   useEffect(() => {
@@ -38,15 +34,9 @@ export default function SunPathDashboard() {
             active
           />
 
-          <SidebarItem
-            icon={<MapIcon size={20} />}
-            label="مانیتورینگ زنده"
-          />
+          <SidebarItem icon={<MapIcon size={20} />} label="مانیتورینگ زنده" />
 
-          <SidebarItem
-            icon={<Settings size={20} />}
-            label="تنظیمات"
-          />
+          <SidebarItem icon={<Settings size={20} />} label="تنظیمات" />
         </nav>
 
         <div className="mt-auto hidden rounded-xl border border-orange-100 bg-orange-50 p-2 dark:border-orange-800 dark:bg-orange-900/20 lg:block">
@@ -72,11 +62,7 @@ export default function SunPathDashboard() {
           </div>
         </header>
 
-
-    
-      <LiveMapLoader/>
-
-
+        <LiveMapLoader />
       </section>
     </main>
   );
