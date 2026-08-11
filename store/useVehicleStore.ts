@@ -174,7 +174,10 @@ export const useVehicleStore = create<VehicleState>((set) => ({
       );
 
       if (!exists) {
-        console.log('[VehicleStore] Vehicle not found. Adding:', normalizedVehicleId);
+        console.log(
+          '[VehicleStore] Vehicle not found. Adding:',
+          normalizedVehicleId,
+        );
 
         const newVehicle: Vehicle = {
           id: normalizedVehicleId,
@@ -199,8 +202,12 @@ export const useVehicleStore = create<VehicleState>((set) => ({
                 ...vehicle,
                 latitude: normalizedLat,
                 longitude: normalizedLng,
-                speed: Number.isFinite(normalizedSpeed) ? normalizedSpeed : vehicle.speed,
-                heading: Number.isFinite(normalizedHeading) ? normalizedHeading : vehicle.heading,
+                speed: Number.isFinite(normalizedSpeed)
+                  ? normalizedSpeed
+                  : vehicle.speed,
+                heading: Number.isFinite(normalizedHeading)
+                  ? normalizedHeading
+                  : vehicle.heading,
                 lastUpdate: new Date().toISOString(),
               }
             : vehicle,
