@@ -1,19 +1,32 @@
 'use client';
 
-import { LayoutDashboard, Map as MapIcon, Settings, Truck } from 'lucide-react';
+import { useEffect } from 'react';
+import {
+  LayoutDashboard,
+  Map as MapIcon,
+  Settings,
+  Truck,
+} from 'lucide-react';
 
 import LiveMap from '@/components/map/LiveMapLoader';
+import { signalRService } from '@/services/signalrService';
+import LiveMapLoader from '@/components/map/LiveMapLoader';
 
 export default function SunPathDashboard() {
+  useEffect(() => {
+    signalRService.startConnection();
+  }, []);
+
   return (
-    <main className="flex h-screen bg-slate-50 dark:bg-slate-950 p-4 gap-4 overflow-hidden font-vazir">
-      {/* سایدبار کناری زیبا */}
-      <aside className="w-20 lg:w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl flex flex-col p-4 transition-all border border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-3 px-2 mb-10">
-          <div className="bg-orange-500 p-2 rounded-lg">
+    <main className="flex h-screen overflow-hidden bg-slate-50 p-4 font-vazir dark:bg-slate-950">
+      {/* Sidebar */}
+      <aside className="flex w-20 shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900 lg:w-64">
+        <div className="mb-10 flex items-center gap-3 px-2">
+          <div className="rounded-lg bg-orange-500 p-2">
             <Truck className="text-white" size={24} />
           </div>
-          <h1 className="text-xl font-bold hidden lg:block text-slate-800 dark:text-white">
+
+          <h1 className="hidden text-xl font-bold text-slate-800 dark:text-white lg:block">
             SunPath
           </h1>
         </div>
@@ -24,34 +37,46 @@ export default function SunPathDashboard() {
             label="داشبورد"
             active
           />
-          <SidebarItem icon={<MapIcon size={20} />} label="مانیتورینگ زنده" />
-          <SidebarItem icon={<Settings size={20} />} label="تنظیمات" />
+
+          <SidebarItem
+            icon={<MapIcon size={20} />}
+            label="مانیتورینگ زنده"
+          />
+
+          <SidebarItem
+            icon={<Settings size={20} />}
+            label="تنظیمات"
+          />
         </nav>
 
-        <div className="mt-auto p-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl hidden lg:block border border-orange-100 dark:border-orange-800">
+        <div className="mt-auto hidden rounded-xl border border-orange-100 bg-orange-50 p-2 dark:border-orange-800 dark:bg-orange-900/20 lg:block">
           <p className="text-xs text-orange-600 dark:text-orange-400">
             سیستم مدیریت ناوگان خورشید
           </p>
-          <p className="text-[10px] text-slate-500 mt-1">نسخه ۱.۰.۰</p>
+
+          <p className="mt-1 text-[10px] text-slate-500">نسخه ۱.۰.۰</p>
         </div>
       </aside>
 
-      {/* محتوای اصلی (نقشه) */}
-      <section className="flex-1 flex flex-col gap-4 min-w-0">
-        <header className="h-16 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex items-center px-6 justify-between border border-slate-200 dark:border-slate-800">
+      {/* Main content */}
+      <section className="flex min-w-0 flex-1 flex-col gap-4">
+        <header className="flex h-16 items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-4 text-slate-600 dark:text-slate-300">
-            <h2 className="font-semibold text-lg italic">
+            <h2 className="text-lg font-semibold italic">
               خوش اومدی آزاده جون 👋
             </h2>
           </div>
+
           <div className="flex gap-2">
-            <div className="h-10 w-10 rounded-full bg-slate-200 border-2 border-orange-400" />
+            <div className="h-10 w-10 rounded-full border-2 border-orange-400 bg-slate-200" />
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 relative">
-          <LiveMap />
-        </div>
+
+    
+      <LiveMapLoader/>
+
+
       </section>
     </main>
   );
@@ -68,17 +93,15 @@ function SidebarItem({
 }) {
   return (
     <div
-      className={`
-      flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all
-      ${
+      className={[
+        'flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-all',
         active
           ? 'bg-orange-500 text-white shadow-lg shadow-orange-200 dark:shadow-none'
-          : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-      }
-    `}
+          : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800',
+      ].join(' ')}
     >
       {icon}
-      <span className="font-medium hidden lg:block">{label}</span>
+      <span className="hidden font-medium lg:block">{label}</span>
     </div>
   );
 }
