@@ -6,5 +6,5 @@ export interface Vehicle {
   longitude: number;
   speed: number;
   heading: number;
-  lastUpdate: string; 
+  lastUpdate: string;
 }
