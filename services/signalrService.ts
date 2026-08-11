@@ -1,4 +1,5 @@
 import * as signalR from '@microsoft/signalr';
+
 import { useVehicleStore } from '@/store/useVehicleStore';
 
 class SignalRService {
@@ -20,24 +21,27 @@ class SignalRService {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL, {
         skipNegotiation: false,
-        transport: signalR.HttpTransportType.WebSockets
+        transport: signalR.HttpTransportType.WebSockets,
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)
       .build();
 
-    this.connection.start()
+    this.connection
+      .start()
       .then(() => console.log(`Connected to SunPath Hub at: ${baseUrl} 🛰️`))
       .catch((err) => console.error('SignalR Connection Error: ', err));
 
     this.connection.on('VehiclePositionChanged', (data) => {
-      useVehicleStore.getState().updateVehiclePosition(
-        data.id, 
-        data.latitude, 
-        data.longitude, 
-        data.speed, 
-        data.heading
-      );
+      useVehicleStore
+        .getState()
+        .updateVehiclePosition(
+          data.id,
+          data.latitude,
+          data.longitude,
+          data.speed,
+          data.heading,
+        );
     });
   }
 }
