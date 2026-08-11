@@ -5,8 +5,8 @@ import { useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 
-import { useVehicleStore } from '@/store/useVehicleStore';
 import { signalRService } from '@/services/signalrService';
+import { useVehicleStore } from '@/store/useVehicleStore';
 
 import VehicleMarker from './VehicleMarker';
 
@@ -15,10 +15,8 @@ if (typeof window !== 'undefined') {
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
 
@@ -113,13 +111,13 @@ export default function LiveMap() {
           </span>
 
           <span>
-            {isLoading ? 'در حال بارگذاری...' : `${validVehicles.length} خودرو متصل`}
+            {isLoading
+              ? 'در حال بارگذاری...'
+              : `${validVehicles.length} خودرو متصل`}
           </span>
         </div>
 
-        {error && (
-          <div className="mt-1 text-xs text-red-600">{error}</div>
-        )}
+        {error && <div className="mt-1 text-xs text-red-600">{error}</div>}
       </div>
     </div>
   );
