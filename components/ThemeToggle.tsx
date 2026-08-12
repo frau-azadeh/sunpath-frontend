@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
+
 import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 export const ThemeToggle = () => {
   const [mounted, setMounted] = useState(false);
@@ -13,9 +14,7 @@ export const ThemeToggle = () => {
   }, []);
 
   if (!mounted) {
-    return (
-      <div className="h-10 w-10 rounded-xl border border-border" />
-    );
+    return <div className="h-10 w-10 rounded-xl border border-border" />;
   }
 
   return (
