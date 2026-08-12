@@ -1,10 +1,12 @@
 'use client';
 
-import { useLayoutEffect, useRef, useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
-import { Vehicle } from '@/types/fleet';
+
 import { useVehicleStore } from '@/store/useVehicleStore';
+import { Vehicle } from '@/types/fleet';
 
 interface VehicleMarkerProps {
   vehicle: Vehicle;
@@ -13,7 +15,9 @@ interface VehicleMarkerProps {
 export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
   const markerRef = useRef<L.Marker>(null);
 
-  const setSelectedVehicleId = useVehicleStore((state) => state.setSelectedVehicleId);
+  const setSelectedVehicleId = useVehicleStore(
+    (state) => state.setSelectedVehicleId,
+  );
   const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
 
   const isSelected = selectedVehicleId === vehicle.id;
