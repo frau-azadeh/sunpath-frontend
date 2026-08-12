@@ -3,26 +3,25 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Activity,
+  Bell,
   LayoutDashboard,
   Map as MapIcon,
-  Settings,
-  Truck,
   Menu,
-  X,
-  Sun,
   Moon,
-  Activity,
+  Settings,
+  Sun,
+  Truck,
   Wifi,
-  Bell,
+  X,
 } from 'lucide-react';
-
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
 import LiveMapLoader from '@/components/map/LiveMapLoader';
-import { signalRService } from '@/services/signalrService';
 import { faNumber } from '@/lib/format';
+import { signalRService } from '@/services/signalrService';
 
 export default function SunPathDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -35,10 +34,9 @@ export default function SunPathDashboard() {
     alerts: 2,
   });
 
-useEffect(() => {
-  void signalRService.startConnection();
-}, []);
-
+  useEffect(() => {
+    void signalRService.startConnection();
+  }, []);
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
@@ -146,7 +144,10 @@ useEffect(() => {
               transition={{ duration: 0.25, delay: 0.05 }}
               className="flex min-h-0 flex-col gap-4"
             >
-              <PanelCard title="وضعیت سیستم" icon={<LayoutDashboard size={18} />}>
+              <PanelCard
+                title="وضعیت سیستم"
+                icon={<LayoutDashboard size={18} />}
+              >
                 <PanelRow label="SignalR" value="Connected" />
                 <PanelRow label="API" value="Healthy" />
                 <PanelRow label="Map" value="Loaded" />
@@ -203,14 +204,20 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex flex-col gap-2">
-        <SidebarItem icon={<LayoutDashboard size={20} />} label="داشبورد" active />
+        <SidebarItem
+          icon={<LayoutDashboard size={20} />}
+          label="داشبورد"
+          active
+        />
         <SidebarItem icon={<MapIcon size={20} />} label="مانیتورینگ زنده" />
         <SidebarItem icon={<Settings size={20} />} label="تنظیمات" />
       </nav>
 
       <div className="mt-auto rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
         <p className="text-sm font-medium">سیستم مدیریت ناوگان</p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">نسخه ۱.۰.۰</p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          نسخه ۱.۰.۰
+        </p>
       </div>
     </>
   );
@@ -238,7 +245,9 @@ function Header({
         </button>
 
         <div>
-          <h2 className="text-base font-semibold md:text-lg">خوش اومدی آزاده جون 👋</h2>
+          <h2 className="text-base font-semibold md:text-lg">
+            خوش اومدی آزاده جون 👋
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 md:text-sm">
             مدیریت لحظه‌ای ناوگان و شبیه‌سازی
           </p>
@@ -313,7 +322,9 @@ function StatCard({
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
           <p className="mt-2 text-2xl font-bold">{value}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{desc}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {desc}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 p-3 text-orange-500 dark:border-slate-800">
@@ -350,7 +361,9 @@ function PanelCard({
 function PanelRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 dark:border-slate-800">
-      <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-sm text-slate-500 dark:text-slate-400">
+        {label}
+      </span>
       <span className="text-sm font-medium">{value}</span>
     </div>
   );
@@ -360,8 +373,9 @@ function EventItem({ title, time }: { title: string; time: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 px-4 py-3 dark:border-slate-800">
       <div className="text-sm font-medium">{title}</div>
-      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{time}</div>
+      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        {time}
+      </div>
     </div>
   );
 }
-
