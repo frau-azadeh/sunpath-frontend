@@ -1,5 +1,6 @@
 // src/services/signalrService.ts
 import * as signalR from '@microsoft/signalr';
+
 import { useVehicleStore } from '@/store/useVehicleStore';
 
 type VehiclePositionPayload = {
@@ -72,7 +73,9 @@ class SignalRService {
     // اگر CONFIG هنوز آماده نشده، داینامیک retry کن
     if (!hubUrl) {
       if (!this.configRetryTimer) {
-        console.log('[SignalR] Waiting for window.CONFIG.NEXT_PUBLIC_API_BASE...');
+        console.log(
+          '[SignalR] Waiting for window.CONFIG.NEXT_PUBLIC_API_BASE...',
+        );
         this.configRetryTimer = setTimeout(() => {
           this.configRetryTimer = null;
           this.startConnection();
@@ -139,13 +142,15 @@ class SignalRService {
         return;
       }
 
-      useVehicleStore.getState().updateVehiclePosition(
-        vehicleId,
-        latitude,
-        longitude,
-        Number.isFinite(speed) ? speed : 0,
-        Number.isFinite(heading) ? heading : 0,
-      );
+      useVehicleStore
+        .getState()
+        .updateVehiclePosition(
+          vehicleId,
+          latitude,
+          longitude,
+          Number.isFinite(speed) ? speed : 0,
+          Number.isFinite(heading) ? heading : 0,
+        );
     });
 
     connection.onreconnecting((error) => {
