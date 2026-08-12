@@ -1,5 +1,6 @@
 // src/store/useVehicleStore.ts
 import { create } from 'zustand';
+
 import { Vehicle } from '@/types/fleet';
 
 type VehicleApiItem = {
