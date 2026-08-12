@@ -1,5 +1,5 @@
+// src/store/useVehicleStore.ts
 import { create } from 'zustand';
-
 import { Vehicle } from '@/types/fleet';
 
 type VehicleApiItem = {
@@ -182,7 +182,7 @@ export const useVehicleStore = create<VehicleState>((set) => ({
         const newVehicle: Vehicle = {
           id: normalizedVehicleId,
           plateNumber: `خودرو ${normalizedVehicleId}`,
-          status: '0',
+          status: '1', // آنلاین
           latitude: normalizedLat,
           longitude: normalizedLng,
           speed: Number.isFinite(normalizedSpeed) ? normalizedSpeed : 0,
@@ -208,6 +208,8 @@ export const useVehicleStore = create<VehicleState>((set) => ({
                 heading: Number.isFinite(normalizedHeading)
                   ? normalizedHeading
                   : vehicle.heading,
+                // اگر خودرو در حال حرکت باشه (سرعت بیشتر از صفر)، وضعیت رو به فعال تغییر بده
+                status: normalizedSpeed > 0 ? '1' : '0',
                 lastUpdate: new Date().toISOString(),
               }
             : vehicle,
