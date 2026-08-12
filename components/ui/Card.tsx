@@ -6,7 +6,7 @@ interface CardProps {
   className?: string;
 }
 
-export const Card = ({ children, className = "" }: CardProps) => {
+export const Card = ({ children, className = '' }: CardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
