@@ -1,19 +1,30 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import {
+  Clock,
+  Compass,
+  Gauge,
+  Navigation,
+  Play,
+  Square,
+  X,
+} from 'lucide-react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+
 import { signalRService } from '@/services/signalrService';
 import { useVehicleStore } from '@/store/useVehicleStore';
-import VehicleMarker from './VehicleMarker';
-import { Compass, Gauge, Clock, Navigation, X, Play, Square } from 'lucide-react';
 
-import 'leaflet/dist/leaflet.css';
+import VehicleMarker from './VehicleMarker';
 
 // فیکس کردن آیکون‌های پیش‌فرض
 if (typeof window !== 'undefined') {
   L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconRetinaUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
@@ -32,7 +43,13 @@ function MapResizeHandler() {
   return null;
 }
 
-function MapViewController({ selectedLat, selectedLng }: { selectedLat: number | null; selectedLng: number | null }) {
+function MapViewController({
+  selectedLat,
+  selectedLng,
+}: {
+  selectedLat: number | null;
+  selectedLng: number | null;
+}) {
   const map = useMap();
   useEffect(() => {
     if (selectedLat !== null && selectedLng !== null) {
@@ -45,10 +62,14 @@ function MapViewController({ selectedLat, selectedLng }: { selectedLat: number |
 export default function LiveMap() {
   const vehicles = useVehicleStore((state) => state.vehicles);
   const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
-  const setSelectedVehicleId = useVehicleStore((state) => state.setSelectedVehicleId);
+  const setSelectedVehicleId = useVehicleStore(
+    (state) => state.setSelectedVehicleId,
+  );
   const loadVehicles = useVehicleStore((state) => state.loadVehicles);
-  const updateVehiclePosition = useVehicleStore((state) => state.updateVehiclePosition);
-  
+  const updateVehiclePosition = useVehicleStore(
+    (state) => state.updateVehiclePosition,
+  );
+
   const [filter, setFilter] = useState<'all' | 'moving' | 'stopped'>('all');
   const [isLocalSimulating, setIsLocalSimulating] = useState(false);
 
@@ -68,7 +89,13 @@ export default function LiveMap() {
 
         const newLat = lat + (Math.random() - 0.5) * 0.0005;
         const newLng = lng + (Math.random() - 0.5) * 0.0005;
-        updateVehiclePosition(vehicle.id, newLat, newLng, Math.floor(Math.random() * 60) + 20, (Number(vehicle.heading) + 10) % 360);
+        updateVehiclePosition(
+          vehicle.id,
+          newLat,
+          newLng,
+          Math.floor(Math.random() * 60) + 20,
+          (Number(vehicle.heading) + 10) % 360,
+        );
       });
     }, 1000);
     return () => clearInterval(interval);
@@ -90,16 +117,20 @@ export default function LiveMap() {
   return (
     <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
       <div className="relative h-full w-full">
-        <MapContainer 
-          center={TEHRAN_CENTER} 
-          zoom={12} 
+        <MapContainer
+          center={TEHRAN_CENTER}
+          zoom={12}
           className="h-full w-full z-0"
           style={{ height: '100%', width: '100%' }}
         >
           <MapResizeHandler />
-          <MapViewController 
-            selectedLat={selectedVehicle ? Number(selectedVehicle.latitude) : null} 
-            selectedLng={selectedVehicle ? Number(selectedVehicle.longitude) : null} 
+          <MapViewController
+            selectedLat={
+              selectedVehicle ? Number(selectedVehicle.latitude) : null
+            }
+            selectedLng={
+              selectedVehicle ? Number(selectedVehicle.longitude) : null
+            }
           />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           {validVehicles.map((v) => (
@@ -115,7 +146,9 @@ export default function LiveMap() {
                 key={f}
                 onClick={() => setFilter(f as any)}
                 className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
-                  filter === f ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900' : 'text-slate-500 hover:bg-slate-100'
+                  filter === f
+                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
+                    : 'text-slate-500 hover:bg-slate-100'
                 }`}
               >
                 {f === 'all' ? 'همه' : f === 'moving' ? 'متحرک' : 'متوقف'}
@@ -128,7 +161,11 @@ export default function LiveMap() {
               isLocalSimulating ? 'bg-rose-500 animate-pulse' : 'bg-indigo-600'
             }`}
           >
-            {isLocalSimulating ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+            {isLocalSimulating ? (
+              <Square size={12} fill="currentColor" />
+            ) : (
+              <Play size={12} fill="currentColor" />
+            )}
             {isLocalSimulating ? 'توقف تست' : 'شبیه‌ساز تست'}
           </button>
         </div>
@@ -142,11 +179,17 @@ export default function LiveMap() {
               <Navigation className="h-3 w-3 text-orange-500" />
               خودرو {selectedVehicle.id}
             </h3>
-            <button onClick={() => setSelectedVehicleId(null)}><X size={14} /></button>
+            <button onClick={() => setSelectedVehicleId(null)}>
+              <X size={14} />
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-             <div className="flex items-center gap-1"><Gauge size={12}/> {selectedVehicle.speed} km/h</div>
-             <div className="flex items-center gap-1"><Compass size={12}/> {selectedVehicle.heading}°</div>
+            <div className="flex items-center gap-1">
+              <Gauge size={12} /> {selectedVehicle.speed} km/h
+            </div>
+            <div className="flex items-center gap-1">
+              <Compass size={12} /> {selectedVehicle.heading}°
+            </div>
           </div>
         </div>
       )}
