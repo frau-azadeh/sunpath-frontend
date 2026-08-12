@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+
 import { Menu, X } from 'lucide-react';
 
 import Sidebar from '@/components/dashboard/Sidebar';
+
 import { ThemeToggle } from '../ThemeToggle';
 
 export const DashboardLayout = ({ children }: { children: ReactNode }) => {
