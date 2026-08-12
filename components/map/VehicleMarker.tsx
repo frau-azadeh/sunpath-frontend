@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import L from 'leaflet';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 
+import { useVehicleStore } from '@/store/useVehicleStore';
 import { Vehicle } from '@/types/fleet';
 
 interface VehicleMarkerProps {
@@ -12,81 +13,69 @@ interface VehicleMarkerProps {
 }
 
 export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
-  const latitude = Number(vehicle.latitude);
-  const longitude = Number(vehicle.longitude);
-  const heading = Number(vehicle.heading ?? 0);
+  const markerRef = useRef<L.Marker>(null);
 
-  const vehicleIcon = useMemo(() => {
-    const safeHeading = Number.isFinite(heading) ? heading : 0;
+  const setSelectedVehicleId = useVehicleStore(
+    (state) => state.setSelectedVehicleId,
+  );
+  const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
 
-    return L.divIcon({
-      className: 'vehicle-marker-container',
-      html: `
-        <div
-          style="
-            width: 46px;
-            height: 46px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform: rotate(${safeHeading}deg);
-            transform-origin: center;
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
-          "
-        >
-          <div
-            style="
-              width: 36px;
-              height: 36px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 9999px;
-              border: 3px solid white;
-              background: #2563eb;
-              color: white;
-              font-size: 21px;
-              line-height: 1;
-            "
-          >
-            🚚
+  const isSelected = selectedVehicleId === vehicle.id;
+  const isMoving = Number(vehicle.speed) > 0;
+
+  const icon = useMemo(
+    () =>
+      L.divIcon({
+        className: 'bg-transparent',
+        html: `
+          <div class="relative flex items-center justify-center transition-all duration-700" style="transform: rotate(${vehicle.heading}deg)">
+            ${
+              isMoving
+                ? `<span class="absolute inline-flex h-9 w-9 animate-ping rounded-full bg-emerald-500/30"></span>`
+                : ''
+            }
+            <div class="relative flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-lg transition-all ${
+              isSelected
+                ? 'z-[1002] scale-125 border-white bg-orange-500 text-white'
+                : isMoving
+                  ? 'border-white bg-emerald-500 text-white'
+                  : 'border-white bg-slate-500 text-white'
+            }">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="transform -rotate-45">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </div>
           </div>
-        </div>
-      `,
-      iconSize: [46, 46],
-      iconAnchor: [23, 23],
-      popupAnchor: [0, -23],
-    });
-  }, [heading]);
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      }),
+    [vehicle.heading, isMoving, isSelected],
+  );
 
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude) ||
-    latitude === 0 ||
-    longitude === 0
-  ) {
-    return null;
-  }
+  useLayoutEffect(() => {
+    if (markerRef.current) {
+      const lat = Number(vehicle.latitude);
+      const lng = Number(vehicle.longitude);
+
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        markerRef.current.setLatLng([lat, lng]);
+        markerRef.current.setIcon(icon);
+      }
+    }
+  }, [vehicle.latitude, vehicle.longitude, icon]);
 
   return (
-    <Marker position={[latitude, longitude]} icon={vehicleIcon}>
-      <Popup>
-        <div dir="rtl" className="min-w-[150px] text-sm">
-          <div className="mb-2 font-bold">
-            {vehicle.plateNumber || `خودرو ${vehicle.id}`}
-          </div>
-
-          <div>سرعت: {Number(vehicle.speed ?? 0)} کیلومتر بر ساعت</div>
-
-          <div>جهت حرکت: {Number(vehicle.heading ?? 0)}°</div>
-
-          <div className="mt-1 text-xs text-slate-500">
-            موقعیت:
-            <br />
-            {latitude.toFixed(5)}, {longitude.toFixed(5)}
-          </div>
-        </div>
-      </Popup>
-    </Marker>
+    <Marker
+      ref={markerRef}
+      position={[Number(vehicle.latitude), Number(vehicle.longitude)]}
+      icon={icon}
+      eventHandlers={{
+        click: () => {
+          setSelectedVehicleId(isSelected ? null : vehicle.id);
+        },
+      }}
+    />
   );
 }
