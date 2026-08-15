@@ -152,8 +152,12 @@ export default function LiveMapEnhanced() {
         >
           <MapResizeHandler />
           <MapViewController
-            selectedLat={selectedVehicle ? Number(selectedVehicle.latitude) : null}
-            selectedLng={selectedVehicle ? Number(selectedVehicle.longitude) : null}
+            selectedLat={
+              selectedVehicle ? Number(selectedVehicle.latitude) : null
+            }
+            selectedLng={
+              selectedVehicle ? Number(selectedVehicle.longitude) : null
+            }
           />
           <TileLayer
             key={mapMode}
