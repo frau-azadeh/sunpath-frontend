@@ -22,6 +22,7 @@ import { useTheme } from 'next-themes';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
 import { faNumber } from '@/lib/format';
 import { signalRService } from '@/services/signalrService';
+import Sidebar from '@/components/dashboard/Sidebar';
 
 export default function SunPathDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -171,7 +172,7 @@ export default function SunPathDashboard() {
 function DesktopSidebar() {
   return (
     <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-72 shrink-0 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex">
-      <SidebarContent />
+      <Sidebar/>
     </aside>
   );
 }
@@ -245,10 +246,8 @@ function Header({
         </button>
 
         <div>
-          <h2 className="text-base font-semibold md:text-lg">
-            خوش اومدی آزاده جون 👋
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 md:text-sm">
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 md:text-xl">
             مدیریت لحظه‌ای ناوگان و شبیه‌سازی
           </p>
         </div>
