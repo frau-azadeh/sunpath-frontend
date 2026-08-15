@@ -1,4 +1,5 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+
 import MapClient from './MapClient';
 
 export default function MapPage() {
