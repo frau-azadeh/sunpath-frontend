@@ -113,26 +113,24 @@ export default function LiveMapEnhanced() {
   const vehiclesRef = useRef(vehicles);
 
   // لود داینامیک تنظیمات آیکون‌های لیفلت فقط روی کلاینت
-// لود داینامیک تنظیمات آیکون‌های لیفلت فقط روی کلاینت
-useEffect(() => {
-  if (typeof window === 'undefined') return;
+  // لود داینامیک تنظیمات آیکون‌های لیفلت فقط روی کلاینت
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  const setupLeafletIcons = async () => {
-    const L = await import('leaflet');
+    const setupLeafletIcons = async () => {
+      const L = await import('leaflet');
 
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl:
-        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl:
-        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl:
-        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-  };
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl:
+          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl:
+          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+    };
 
-  void setupLeafletIcons();
-}, []);
-
+    void setupLeafletIcons();
+  }, []);
 
   useEffect(() => {
     vehiclesRef.current = vehicles;
