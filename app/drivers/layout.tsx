@@ -6,8 +6,6 @@ interface DriversLayoutProps {
   children: ReactNode;
 }
 
-export default function DriversLayout({
-  children,
-}: DriversLayoutProps) {
+export default function DriversLayout({ children }: DriversLayoutProps) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
