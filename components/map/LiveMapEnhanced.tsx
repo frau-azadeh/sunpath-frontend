@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -10,7 +10,6 @@ import {
   Layers,
   Navigation,
   Play,
-  Satellite,
   Square,
   X,
 } from 'lucide-react';
@@ -21,7 +20,6 @@ import { useVehicleStore } from '@/store/useVehicleStore';
 
 import VehicleMarker from '../map/VehicleMarker';
 
-// فیکس آیکونهای پیشفرض Leaflet
 if (typeof window !== 'undefined') {
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
@@ -34,25 +32,29 @@ if (typeof window !== 'undefined') {
 const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
 
 type MapMode = 'road' | 'traffic' | 'satellite' | 'dark';
+type VehicleFilter = 'all' | 'moving' | 'stopped';
 
-const MAP_LAYERS: Record<
-  MapMode,
-  { name: string; url: string; attribution: string }
-> = {
+interface MapLayerConfig {
+  name: string;
+  url: string;
+  attribution: string;
+}
+
+const MAP_LAYERS: Record<MapMode, MapLayerConfig> = {
   road: {
-    name: 'جادهای',
+    name: 'جاده‌ای',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap contributors',
   },
   traffic: {
-    name: 'ترافیکی',
+    name: 'توپوگرافی',
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenTopoMap',
   },
   satellite: {
-    name: 'ماهوارهای',
+    name: 'ماهواره‌ای',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar',
+    attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics',
   },
   dark: {
     name: 'تیره',
@@ -63,26 +65,41 @@ const MAP_LAYERS: Record<
 
 function MapResizeHandler() {
   const map = useMap();
+
   useEffect(() => {
-    const timer = setTimeout(() => map.invalidateSize(), 200);
-    return () => clearTimeout(timer);
+    const timerId = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, [map]);
+
   return null;
+}
+
+interface MapViewControllerProps {
+  selectedLat: number | null;
+  selectedLng: number | null;
 }
 
 function MapViewController({
   selectedLat,
   selectedLng,
-}: {
-  selectedLat: number | null;
-  selectedLng: number | null;
-}) {
+}: MapViewControllerProps) {
   const map = useMap();
+
   useEffect(() => {
-    if (selectedLat !== null && selectedLng !== null) {
-      map.setView([selectedLat, selectedLng], 15, { animate: true });
+    if (selectedLat === null || selectedLng === null) {
+      return;
     }
-  }, [selectedLat, selectedLng, map]);
+
+    map.setView([selectedLat, selectedLng], 15, {
+      animate: true,
+    });
+  }, [map, selectedLat, selectedLng]);
+
   return null;
 }
 
@@ -97,49 +114,99 @@ export default function LiveMapEnhanced() {
     (state) => state.updateVehiclePosition,
   );
 
-  const [filter, setFilter] = useState<'all' | 'moving' | 'stopped'>('all');
+  const [filter, setFilter] = useState<VehicleFilter>('all');
   const [mapMode, setMapMode] = useState<MapMode>('road');
   const [isLocalSimulating, setIsLocalSimulating] = useState(false);
 
+  const vehiclesRef = useRef(vehicles);
+
+  useEffect(() => {
+    vehiclesRef.current = vehicles;
+  }, [vehicles]);
+
   useEffect(() => {
     void loadVehicles();
-    signalRService.startConnection();
+    void signalRService.startConnection();
   }, [loadVehicles]);
 
   useEffect(() => {
-    if (!isLocalSimulating) return;
-    const interval = setInterval(() => {
-      vehicles.forEach((vehicle) => {
-        const lat = Number(vehicle.latitude);
-        const lng = Number(vehicle.longitude);
-        if (isNaN(lat) || isNaN(lng)) return;
+    if (!isLocalSimulating) {
+      return;
+    }
 
-        const newLat = lat + (Math.random() - 0.5) * 0.0005;
-        const newLng = lng + (Math.random() - 0.5) * 0.0005;
+    const intervalId = window.setInterval(() => {
+      vehiclesRef.current.forEach((vehicle) => {
+        const latitude = Number(vehicle.latitude);
+        const longitude = Number(vehicle.longitude);
+        const heading = Number(vehicle.heading);
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return;
+        }
+
+        const newLatitude = latitude + (Math.random() - 0.5) * 0.0005;
+
+        const newLongitude = longitude + (Math.random() - 0.5) * 0.0005;
+
+        const newSpeed = Math.floor(Math.random() * 60) + 20;
+
+        const newHeading =
+          ((Number.isFinite(heading) ? heading : 0) + 10) % 360;
+
         updateVehiclePosition(
           vehicle.id,
-          newLat,
-          newLng,
-          Math.floor(Math.random() * 60) + 20,
-          (Number(vehicle.heading) + 10) % 360,
+          newLatitude,
+          newLongitude,
+          newSpeed,
+          newHeading,
         );
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [isLocalSimulating, vehicles, updateVehiclePosition]);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isLocalSimulating, updateVehiclePosition]);
 
   const validVehicles = useMemo(() => {
-    return vehicles.filter((v) => {
-      const lat = Number(v.latitude);
-      const lng = Number(v.longitude);
-      if (isNaN(lat) || isNaN(lng) || lat === 0) return false;
-      if (filter === 'moving') return v.speed > 0;
-      if (filter === 'stopped') return v.speed === 0;
+    return vehicles.filter((vehicle) => {
+      const latitude = Number(vehicle.latitude);
+      const longitude = Number(vehicle.longitude);
+      const speed = Number(vehicle.speed);
+
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude === 0 ||
+        longitude === 0
+      ) {
+        return false;
+      }
+
+      if (filter === 'moving') {
+        return speed > 0;
+      }
+
+      if (filter === 'stopped') {
+        return speed === 0;
+      }
+
       return true;
     });
   }, [vehicles, filter]);
 
-  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
+  const selectedVehicle = useMemo(
+    () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null,
+    [vehicles, selectedVehicleId],
+  );
+
+  const selectedLatitude = selectedVehicle
+    ? Number(selectedVehicle.latitude)
+    : null;
+
+  const selectedLongitude = selectedVehicle
+    ? Number(selectedVehicle.longitude)
+    : null;
 
   return (
     <div className="relative flex h-full w-full overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
@@ -151,33 +218,39 @@ export default function LiveMapEnhanced() {
           style={{ height: '100%', width: '100%' }}
         >
           <MapResizeHandler />
+
           <MapViewController
             selectedLat={
-              selectedVehicle ? Number(selectedVehicle.latitude) : null
+              Number.isFinite(selectedLatitude ?? NaN) ? selectedLatitude : null
             }
             selectedLng={
-              selectedVehicle ? Number(selectedVehicle.longitude) : null
+              Number.isFinite(selectedLongitude ?? NaN)
+                ? selectedLongitude
+                : null
             }
           />
+
           <TileLayer
             key={mapMode}
             url={MAP_LAYERS[mapMode].url}
             attribution={MAP_LAYERS[mapMode].attribution}
           />
-          {validVehicles.map((v) => (
-            <VehicleMarker key={v.id} vehicle={v} />
+
+          {validVehicles.map((vehicle) => (
+            <VehicleMarker key={vehicle.id} vehicle={vehicle} />
           ))}
         </MapContainer>
 
-        {/* لایههای نقشه */}
-        <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2">
-          <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-            <Layers size={14} className="mr-1 text-orange-500" />
-            {(['road', 'traffic', 'satellite', 'dark'] as const).map((mode) => (
+        <div className="absolute right-4 top-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+            <Layers size={14} className="mr-1 shrink-0 text-orange-500" />
+
+            {(Object.keys(MAP_LAYERS) as MapMode[]).map((mode) => (
               <button
                 key={mode}
+                type="button"
                 onClick={() => setMapMode(mode)}
-                className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-all ${
+                className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
                   mapMode === mode
                     ? 'bg-orange-500 text-white'
                     : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
@@ -188,27 +261,31 @@ export default function LiveMapEnhanced() {
             ))}
           </div>
 
-          {/* فیلتر وسایل نقلیه */}
-          <div className="flex gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-            {(['all', 'moving', 'stopped'] as const).map((f) => (
+          <div className="flex w-fit gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+            {(['all', 'moving', 'stopped'] as const).map((filterOption) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition-all ${
-                  filter === f
+                key={filterOption}
+                type="button"
+                onClick={() => setFilter(filterOption)}
+                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
+                  filter === filterOption
                     ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
                     : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                 }`}
               >
-                {f === 'all' ? 'همه' : f === 'moving' ? 'متحرک' : 'متوقف'}
+                {filterOption === 'all'
+                  ? 'همه'
+                  : filterOption === 'moving'
+                    ? 'متحرک'
+                    : 'متوقف'}
               </button>
             ))}
           </div>
 
-          {/* شبیهساز */}
           <button
-            onClick={() => setIsLocalSimulating(!isLocalSimulating)}
-            className={`flex items-center justify-center gap-2 rounded-2xl border py-2 text-[10px] font-bold shadow-sm transition-all backdrop-blur ${
+            type="button"
+            onClick={() => setIsLocalSimulating((current) => !current)}
+            className={`flex items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-[10px] font-bold shadow-sm transition-colors ${
               isLocalSimulating
                 ? 'animate-pulse border-rose-200 bg-rose-500 text-white dark:border-rose-900'
                 : 'border-orange-200 bg-orange-500 text-white hover:bg-orange-600 dark:border-orange-900'
@@ -219,34 +296,40 @@ export default function LiveMapEnhanced() {
             ) : (
               <Play size={12} fill="currentColor" />
             )}
-            {isLocalSimulating ? 'توقف تست' : 'شبیهساز تست'}
+
+            {isLocalSimulating ? 'توقف تست' : 'شبیه‌ساز تست'}
           </button>
         </div>
       </div>
 
-      {/* پنل خودرو انتخابشده */}
       {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-72 rounded-[20px] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
-          <div className="mb-2 flex items-center justify-between border-b pb-2 dark:border-slate-800">
-            <h3 className="flex items-center gap-2 text-sm font-bold">
-              <Navigation className="h-3 w-3 text-orange-500" />
-              خودرو {selectedVehicle.id}
+        <div className="absolute bottom-4 left-4 z-[1000] w-72 max-w-[calc(100%-2rem)] rounded-[20px] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
+          <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
+            <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold">
+              <Navigation className="h-3 w-3 shrink-0 text-orange-500" />
+              <span className="truncate">خودرو {selectedVehicle.id}</span>
             </h3>
+
             <button
+              type="button"
               onClick={() => setSelectedVehicleId(null)}
-              className="text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+              className="shrink-0 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+              aria-label="بستن اطلاعات خودرو"
+              title="بستن"
             >
               <X size={14} />
             </button>
           </div>
+
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
               <Gauge size={12} className="text-orange-500" />
-              {selectedVehicle.speed} km/h
+              {Number(selectedVehicle.speed) || 0} km/h
             </div>
+
             <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
               <Compass size={12} className="text-orange-500" />
-              {selectedVehicle.heading}°
+              {Number(selectedVehicle.heading) || 0}°
             </div>
           </div>
         </div>
