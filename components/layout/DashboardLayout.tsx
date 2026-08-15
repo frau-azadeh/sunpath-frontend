@@ -1,80 +1,117 @@
 'use client';
 
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-
-import { Menu, X } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Menu, Moon, Sun, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 import Sidebar from '@/components/dashboard/Sidebar';
 
-import { ThemeToggle } from '../ThemeToggle';
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
 
-export const DashboardLayout = ({ children }: { children: ReactNode }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    const currentTheme = resolvedTheme ?? theme;
+    setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
-        {/* Mobile overlay */}
-        {isOpen && (
-          <button
-            aria-label="Close sidebar"
-            onClick={() => setIsOpen(false)}
-            className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-[1px] md:hidden"
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside
-          className={[
-            'fixed inset-y-0 right-0 z-50 w-64 border-l border-border bg-background transition-transform duration-300 ease-in-out md:translate-x-0',
-            isOpen ? 'translate-x-0' : 'translate-x-full',
-          ].join(' ')}
-        >
-          <div className="flex h-16 items-center justify-between border-b border-border px-4 md:hidden">
-            <span className="font-semibold">SunPath</span>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="rounded-xl border border-border p-2"
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
+    <main className="min-h-screen bg-slate-50 p-4 font-vazir text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1800px] gap-4">
+        {/* Desktop Sidebar */}
+        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-72 shrink-0 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex">
           <Sidebar />
         </aside>
 
-        {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col md:mr-64">
-          <header className="flex h-16 items-center justify-between border-b border-border bg-background px-4 md:px-6">
+        {/* Mobile Overlay */}
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <motion.aside
+              initial={{ x: 320 }}
+              animate={{ x: 0 }}
+              exit={{ x: 320 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className="fixed right-4 top-4 z-50 h-[calc(100vh-2rem)] w-72 rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:hidden"
+            >
+              <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        <section className="flex min-w-0 flex-1 flex-col gap-4">
+          <header className="flex h-16 items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 md:px-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsOpen(true)}
-                className="rounded-xl border border-border p-2 md:hidden"
-                aria-label="Open menu"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-slate-800 dark:text-slate-200 lg:hidden"
+                aria-label="باز کردن منو"
               >
                 <Menu size={18} />
               </button>
 
               <div>
-                <h1 className="text-base font-semibold tracking-tight md:text-lg">
-                  SunPath Control Panel
-                </h1>
-                <p className="text-xs text-slate-500 md:text-sm">
-                  Fleet tracking dashboard
+
+                <p className="text-base text-slate-500 dark:text-slate-400 md:text-xl">
+                  مدیریت لحظه‌ای ناوگان و شبیه‌سازی
                 </p>
               </div>
             </div>
 
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              {mounted && (
+                <button
+                  onClick={toggleTheme}
+                  className="rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-slate-800 dark:text-slate-200"
+                  aria-label="Toggle theme"
+                  type="button"
+                >
+                  {(resolvedTheme ?? theme) === 'dark' ? (
+                    <Sun size={18} />
+                  ) : (
+                    <Moon size={18} />
+                  )}
+                </button>
+              )}
+
+              <div className="hidden items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800 md:flex">
+                <div className="h-8 w-8 rounded-full border border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800" />
+                <div className="text-right">
+                  <p className="text-sm font-medium leading-4">Azadeh</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Admin
+                  </p>
+                </div>
+              </div>
+            </div>
           </header>
 
-          <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{children}</main>
-        </div>
+          <main className="min-w-0 flex-1">{children}</main>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
