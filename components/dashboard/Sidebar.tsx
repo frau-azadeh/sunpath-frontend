@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import {
-  Activity,
   Bell,
   LayoutDashboard,
   Map as MapIcon,
