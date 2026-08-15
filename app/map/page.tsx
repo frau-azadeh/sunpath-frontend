@@ -1,12 +1,11 @@
-// app/map/page.tsx
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import LiveMapEnhanced from '@/components/map/LiveMapEnhanced';
+import MapClient from './MapClient';
 
 export default function MapPage() {
   return (
     <DashboardLayout>
       <div className="h-full">
-        <LiveMapEnhanced />
+        <MapClient />
       </div>
     </DashboardLayout>
   );
