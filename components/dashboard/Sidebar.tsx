@@ -1,8 +1,10 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+
 import {
   Activity,
   Bell,
