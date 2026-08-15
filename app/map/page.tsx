@@ -6,7 +6,7 @@ export default function MapPage() {
   return (
     <DashboardLayout>
       <div className="h-full">
-       <LiveMapEnhanced/>
+        <LiveMapEnhanced />
       </div>
     </DashboardLayout>
   );
