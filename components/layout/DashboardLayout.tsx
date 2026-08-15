@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
+
 import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -74,7 +75,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </button>
 
               <div>
-
                 <p className="text-base text-slate-500 dark:text-slate-400 md:text-xl">
                   مدیریت لحظه‌ای ناوگان و شبیه‌سازی
                 </p>
