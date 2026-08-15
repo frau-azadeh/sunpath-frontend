@@ -22,6 +22,7 @@ import { useTheme } from 'next-themes';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
 import { faNumber } from '@/lib/format';
 import { signalRService } from '@/services/signalrService';
+
 import Sidebar from './Sidebar';
 
 export default function SunPathDashboard() {
@@ -206,8 +207,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       <nav className="flex flex-col gap-2">
         <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-72 shrink-0 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex">
-                 <Sidebar/>
-               </aside>
+          <Sidebar />
+        </aside>
       </nav>
 
       <div className="mt-auto rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -242,7 +243,6 @@ function Header({
         </button>
 
         <div>
-
           <p className="text-xs text-slate-500 dark:text-slate-400 md:text-xl">
             مدیریت لحظه‌ای ناوگان و شبیه‌سازی
           </p>
