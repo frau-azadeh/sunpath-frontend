@@ -1,25 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  UserPlus, 
-  Search, 
-  Loader2, 
-  Inbox, 
-  Truck, 
-  User, 
-  CreditCard, 
-  Phone,
-  Filter
-} from 'lucide-react';
 
-import { driverService } from '@/services/driverService';
-import type { Driver } from '@/types/driver';
-import { faNumber } from '@/lib/format';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  CreditCard,
+  Filter,
+  Inbox,
+  Loader2,
+  Phone,
+  Search,
+  Truck,
+  User,
+  UserPlus,
+} from 'lucide-react';
 
 import { DriverStats } from '@/components/drivers/DriverStats';
 import { DriverTableRow } from '@/components/drivers/DriverTableRow';
+import { faNumber } from '@/lib/format';
+import { driverService } from '@/services/driverService';
+import type { Driver } from '@/types/driver';
 
 type LoadState = 'loading' | 'error' | 'success';
 
@@ -166,9 +166,14 @@ function LoadingState() {
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="h-12 w-12 rounded-full border-4 border-slate-100 dark:border-slate-800" />
-            <Loader2 className="absolute top-0 animate-spin text-orange-500" size={48} />
+            <Loader2
+              className="absolute top-0 animate-spin text-orange-500"
+              size={48}
+            />
           </div>
-          <span className="text-sm font-medium text-slate-500">در حال دریافت لیست رانندگان...</span>
+          <span className="text-sm font-medium text-slate-500">
+            در حال دریافت لیست رانندگان...
+          </span>
         </div>
       </td>
     </tr>
@@ -183,7 +188,9 @@ function EmptyState() {
           <div className="rounded-full bg-slate-50 p-6 dark:bg-slate-800/50">
             <Inbox size={48} className="opacity-20" />
           </div>
-          <span className="text-sm font-medium">هیچ راننده‌ای با این مشخصات یافت نشد</span>
+          <span className="text-sm font-medium">
+            هیچ راننده‌ای با این مشخصات یافت نشد
+          </span>
         </div>
       </td>
     </tr>
@@ -195,7 +202,9 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     <tr>
       <td colSpan={5} className="py-24">
         <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-red-500">خطایی در برقراری ارتباط با سرور رخ داد</p>
+          <p className="text-sm text-red-500">
+            خطایی در برقراری ارتباط با سرور رخ داد
+          </p>
           <button
             onClick={onRetry}
             className="rounded-xl bg-slate-900 px-6 py-2 text-sm font-bold text-white dark:bg-white dark:text-slate-900"
