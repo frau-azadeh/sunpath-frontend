@@ -22,10 +22,7 @@ const getApiBaseUrl = (): string => {
   return apiBaseUrl.replace(/\/+$/, '');
 };
 
-const request = async <T>(
-  endpoint: string,
-  init?: RequestInit,
-): Promise<T> => {
+const request = async <T>(endpoint: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
     ...init,
     headers: {
