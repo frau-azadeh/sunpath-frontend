@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   Compass,
@@ -19,15 +18,6 @@ import { signalRService } from '@/services/signalrService';
 import { useVehicleStore } from '@/store/useVehicleStore';
 
 import VehicleMarker from '../map/VehicleMarker';
-
-if (typeof window !== 'undefined') {
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  });
-}
 
 const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
 
@@ -67,6 +57,8 @@ function MapResizeHandler() {
   const map = useMap();
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const timerId = window.setTimeout(() => {
       map.invalidateSize();
     }, 200);
@@ -120,6 +112,28 @@ export default function LiveMapEnhanced() {
 
   const vehiclesRef = useRef(vehicles);
 
+  // لود داینامیک تنظیمات آیکون‌های لیفلت فقط روی کلاینت
+// لود داینامیک تنظیمات آیکون‌های لیفلت فقط روی کلاینت
+useEffect(() => {
+  if (typeof window === 'undefined') return;
+
+  const setupLeafletIcons = async () => {
+    const L = await import('leaflet');
+
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+  };
+
+  void setupLeafletIcons();
+}, []);
+
+
   useEffect(() => {
     vehiclesRef.current = vehicles;
   }, [vehicles]);
@@ -130,7 +144,7 @@ export default function LiveMapEnhanced() {
   }, [loadVehicles]);
 
   useEffect(() => {
-    if (!isLocalSimulating) {
+    if (!isLocalSimulating || typeof window === 'undefined') {
       return;
     }
 
@@ -145,11 +159,8 @@ export default function LiveMapEnhanced() {
         }
 
         const newLatitude = latitude + (Math.random() - 0.5) * 0.0005;
-
         const newLongitude = longitude + (Math.random() - 0.5) * 0.0005;
-
         const newSpeed = Math.floor(Math.random() * 60) + 20;
-
         const newHeading =
           ((Number.isFinite(heading) ? heading : 0) + 10) % 360;
 
