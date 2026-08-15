@@ -11,7 +11,6 @@ import {
   Map as MapIcon,
   Menu,
   Moon,
-  Settings,
   Sun,
   Truck,
   Wifi,
@@ -25,22 +24,23 @@ import { signalRService } from '@/services/signalrService';
 
 import Sidebar from './Sidebar';
 
+const INITIAL_STATS = {
+  online: 12,
+  active: 8,
+  alerts: 2,
+};
+
 export default function SunPathDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-
-  // 🔥 دیتا به صورت number نگه داشته می‌شود (در آینده از SignalR می‌آید)
-  const [stats, setStats] = useState({
-    online: 12,
-    active: 8,
-    alerts: 2,
-  });
 
   useEffect(() => {
     void signalRService.startConnection();
   }, []);
 
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 font-vazir text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -66,7 +66,7 @@ export default function SunPathDashboard() {
               animate={{ x: 0 }}
               exit={{ x: 320 }}
               transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="fixed right-4 top-4 z-50 h-[calc(100vh-2rem)] w-72 rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:hidden"
+              className="fixed right-4 top-4 z-50 flex h-[calc(100vh-2rem)] w-72 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:hidden"
             >
               <SidebarContent onClose={() => setMobileSidebarOpen(false)} />
             </motion.aside>
@@ -80,26 +80,28 @@ export default function SunPathDashboard() {
             onThemeToggle={toggleTheme}
           />
 
-          {/* آماری کارت‌ها — عدد فارسی */}
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="خودروهای آنلاین"
-              value={faNumber(stats.online)}
+              value={faNumber(INITIAL_STATS.online)}
               desc="در لحظه متصل"
               icon={<Wifi size={18} />}
             />
+
             <StatCard
               title="حرکت فعال"
-              value={faNumber(stats.active)}
+              value={faNumber(INITIAL_STATS.active)}
               desc="در حال شبیه‌سازی"
               icon={<Activity size={18} />}
             />
+
             <StatCard
               title="هشدارها"
-              value={faNumber(stats.alerts)}
+              value={faNumber(INITIAL_STATS.alerts)}
               desc="نیازمند بررسی"
               icon={<Bell size={18} />}
             />
+
             <StatCard
               title="سیستم"
               value="Stable"
@@ -108,7 +110,6 @@ export default function SunPathDashboard() {
             />
           </section>
 
-          {/* نقشه + پنل */}
           <section className="grid min-w-0 flex-1 gap-4 xl:grid-cols-[1fr_320px]">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -121,6 +122,7 @@ export default function SunPathDashboard() {
                   <div className="rounded-xl border border-slate-200 p-2 dark:border-slate-800">
                     <MapIcon size={18} />
                   </div>
+
                   <div>
                     <h3 className="font-semibold">نقشه زنده</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -168,8 +170,6 @@ export default function SunPathDashboard() {
   );
 }
 
-/* ------------------------------ Sidebar ------------------------------ */
-
 function DesktopSidebar() {
   return (
     <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-72 shrink-0 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex">
@@ -197,8 +197,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
         {onClose && (
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 p-2 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+            aria-label="بستن منوی کناری"
+            className="rounded-xl border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <X size={18} />
           </button>
@@ -206,9 +208,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="flex flex-col gap-2">
-        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-72 shrink-0 flex-col rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex">
-          <Sidebar />
-        </aside>
+        <Sidebar />
       </nav>
 
       <div className="mt-auto rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -220,8 +220,6 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     </>
   );
 }
-
-/* ------------------------------ Header ------------------------------ */
 
 function Header({
   onMenuClick,
@@ -236,7 +234,9 @@ function Header({
     <header className="flex h-16 items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 md:px-6">
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onMenuClick}
+          aria-label="باز کردن منوی کناری"
           className="rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-slate-800 dark:text-slate-200 lg:hidden"
         >
           <Menu size={18} />
@@ -251,15 +251,17 @@ function Header({
 
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={onThemeToggle}
+          aria-label="تغییر تم"
           className="rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-slate-800 dark:text-slate-200"
-          aria-label="Toggle theme"
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         <div className="hidden items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800 md:flex">
           <div className="h-8 w-8 rounded-full border border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800" />
+
           <div className="text-right">
             <p className="text-sm font-medium leading-4">Azadeh</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">Admin</p>
@@ -267,32 +269,6 @@ function Header({
         </div>
       </div>
     </header>
-  );
-}
-
-/* --------------------------- Small helpers --------------------------- */
-
-function SidebarItem({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        'flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition-colors',
-        active
-          ? 'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-400'
-          : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:hover:border-slate-800 dark:hover:bg-slate-800/60',
-      ].join(' ')}
-    >
-      {icon}
-      <span className="hidden font-medium lg:block">{label}</span>
-    </div>
   );
 }
 
@@ -340,7 +316,7 @@ function PanelCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounde3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-4 flex items-center gap-2">
         <span className="rounded-xl border border-slate-200 p-2 dark:border-slate-800">
           {icon}
