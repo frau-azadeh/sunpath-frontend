@@ -4,9 +4,7 @@ interface DriverPageHeaderProps {
   onCreate: () => void;
 }
 
-export const DriverPageHeader = ({
-  onCreate,
-}: DriverPageHeaderProps) => {
+export const DriverPageHeader = ({ onCreate }: DriverPageHeaderProps) => {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
