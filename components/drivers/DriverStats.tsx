@@ -1,4 +1,5 @@
-import { Users, UserCheck, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { type LucideIcon, ShieldCheck, UserCheck, Users } from 'lucide-react';
+
 import { faNumber } from '@/lib/format';
 
 interface DriverStatsProps {
@@ -11,7 +12,7 @@ interface StatConfig {
   label: string;
   value: number;
   icon: LucideIcon;
-  boxClass: string;   // کلاسهای کامل و ثابت ✅
+  boxClass: string; // کلاسهای کامل و ثابت ✅
   iconClass: string;
 }
 
@@ -21,21 +22,24 @@ export const DriverStats = ({ total, licensed, active }: DriverStatsProps) => {
       label: 'کل رانندگان',
       value: total,
       icon: Users,
-      boxClass: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+      boxClass:
+        'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
       iconClass: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
       label: 'دارای گواهینامه',
       value: licensed,
       icon: ShieldCheck,
-      boxClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
+      boxClass:
+        'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
       iconClass: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
     },
     {
       label: 'فعال در سیستم',
       value: active,
       icon: UserCheck,
-    boxClass: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+      boxClass:
+        'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
       iconClass: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20',
     },
   ];
