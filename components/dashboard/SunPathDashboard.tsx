@@ -84,28 +84,28 @@ export default function SunPathDashboard() {
             <StatCard
               title="خودروهای آنلاین"
               value={faNumber(INITIAL_STATS.online)}
-              desc="در لحظه متصل"
+
               icon={<Wifi size={18} />}
             />
 
             <StatCard
               title="حرکت فعال"
               value={faNumber(INITIAL_STATS.active)}
-              desc="در حال شبیه‌سازی"
+
               icon={<Activity size={18} />}
             />
 
             <StatCard
               title="هشدارها"
               value={faNumber(INITIAL_STATS.alerts)}
-              desc="نیازمند بررسی"
+
               icon={<Bell size={18} />}
             />
 
             <StatCard
               title="سیستم"
               value="Stable"
-              desc="SignalR active"
+
               icon={<Truck size={18} />}
             />
           </section>
@@ -275,12 +275,12 @@ function Header({
 function StatCard({
   title,
   value,
-  desc,
+
   icon,
 }: {
   title: string;
   value: string;
-  desc: string;
+
   icon: ReactNode;
 }) {
   return (
@@ -293,9 +293,6 @@ function StatCard({
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
           <p className="mt-2 text-2xl font-bold">{value}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {desc}
-          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 p-3 text-orange-500 dark:border-slate-800">
