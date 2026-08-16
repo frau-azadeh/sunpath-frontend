@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   Bell,
+  Car,
   LayoutDashboard,
   Map as MapIcon,
   Menu,
@@ -14,7 +15,6 @@ import {
   Settings,
   Sun,
   Truck,
-  Wifi,
   X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -23,23 +23,114 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
 import { faNumber } from '@/lib/format';
 import { signalRService } from '@/services/signalrService';
+import { vehicleService } from '@/services/vehicleService';
+import type { Vehicle } from '@/types/vehicle';
 
-// آمار ثابت (در حال حاضر از SignalR نمی‌آید)
-const DASHBOARD_STATS = {
-  online: 12,
-  active: 8,
-  alerts: 2,
-} as const;
+type DashboardStats = {
+  total: number;
+  active: number;
+  inactive: number;
+  cars: number;
+  trucks: number;
+  bikes: number;
+};
+
+const EMPTY_STATS: DashboardStats = {
+  total: 0,
+  active: 0,
+  inactive: 0,
+  cars: 0,
+  trucks: 0,
+  bikes: 0,
+};
+
+const calculateDashboardStats = (vehicles: Vehicle[]): DashboardStats => {
+  return vehicles.reduce<DashboardStats>(
+    (stats, vehicle) => {
+      const status = Number(vehicle.status);
+      const vehicleType = Number(vehicle.vehicleType);
+
+      stats.total += 1;
+
+      if (status === 1) {
+        stats.active += 1;
+      } else {
+        stats.inactive += 1;
+      }
+
+      if (vehicleType === 0) {
+        stats.cars += 1;
+      }
+
+      if (vehicleType === 1 || vehicleType === 2) {
+        stats.trucks += 1;
+      }
+
+      if (vehicleType === 3) {
+        stats.bikes += 1;
+      }
+
+      return stats;
+    },
+    { ...EMPTY_STATS },
+  );
+};
 
 export default function SunPathDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  // بارگذاری اولیه فقط یک‌بار در mount؛
+  // هیچ setState سنکرونی در بدنه effect انجام نمی‌شود.
   useEffect(() => {
     void signalRService.startConnection();
+
+    let isMounted = true;
+
+    const fetchInitialStats = async (): Promise<void> => {
+      try {
+        const data = await vehicleService.getAll();
+
+        if (isMounted) {
+          setVehicles(Array.isArray(data) ? data : []);
+          setStatsError(null);
+        }
+      } catch (error) {
+        console.error('Dashboard vehicles stats error:', error);
+
+        if (isMounted) {
+          setVehicles([]);
+          setStatsError('خطا در دریافت آمار خودروها');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStats(false);
+        }
+      }
+    };
+
+    void fetchInitialStats();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  const stats = useMemo(() => calculateDashboardStats(vehicles), [vehicles]);
+
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
+  const formatStatValue = (value: number): string => {
+    if (isLoadingStats) {
+      return '...';
+    }
+
+    return faNumber(value);
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 font-vazir text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -79,30 +170,35 @@ export default function SunPathDashboard() {
             onThemeToggle={toggleTheme}
           />
 
+          {statsError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+              {statsError}
+            </div>
+          )}
+
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              title="خودروهای آنلاین"
-              value={faNumber(DASHBOARD_STATS.online)}
-              desc="در لحظه متصل"
-              icon={<Wifi size={18} />}
+              title="کل خودروها"
+              value={formatStatValue(stats.total)}
+              icon={<Car size={18} />}
             />
+
             <StatCard
-              title="حرکت فعال"
-              value={faNumber(DASHBOARD_STATS.active)}
-              desc="در حال شبیه‌سازی"
+              title="خودروهای فعال"
+              value={formatStatValue(stats.active)}
               icon={<Activity size={18} />}
             />
+
             <StatCard
-              title="هشدارها"
-              value={faNumber(DASHBOARD_STATS.alerts)}
-              desc="نیازمند بررسی"
-              icon={<Bell size={18} />}
-            />
-            <StatCard
-              title="سیستم"
-              value="Stable"
-              desc="SignalR active"
+              title="وانت و کامیون"
+              value={formatStatValue(stats.trucks)}
               icon={<Truck size={18} />}
+            />
+
+            <StatCard
+              title="غیرفعال"
+              value={formatStatValue(stats.inactive)}
+              icon={<Bell size={18} />}
             />
           </section>
 
@@ -118,6 +214,7 @@ export default function SunPathDashboard() {
                   <div className="rounded-xl border border-slate-200 p-2 dark:border-slate-800">
                     <MapIcon size={18} />
                   </div>
+
                   <div>
                     <h3 className="font-semibold">نقشه زنده</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -148,14 +245,26 @@ export default function SunPathDashboard() {
                 icon={<LayoutDashboard size={18} />}
               >
                 <PanelRow label="SignalR" value="Connected" />
-                <PanelRow label="API" value="Healthy" />
-                <PanelRow label="Map" value="Loaded" />
+                <PanelRow
+                  label="API"
+                  value={statsError ? 'Error' : 'Healthy'}
+                />
+                <PanelRow
+                  label="Vehicles"
+                  value={formatStatValue(stats.total)}
+                />
               </PanelCard>
 
-              <PanelCard title="آخرین رویدادها" icon={<Activity size={18} />}>
-                <EventItem title="Simulation started" time="همین الان" />
-                <EventItem title="Vehicle 1 moved" time="۲ ثانیه پیش" />
-                <EventItem title="DB sync completed" time="۸ ثانیه پیش" />
+              <PanelCard title="خلاصه ناوگان" icon={<Activity size={18} />}>
+                <PanelRow label="سواری" value={formatStatValue(stats.cars)} />
+                <PanelRow
+                  label="وانت / کامیون"
+                  value={formatStatValue(stats.trucks)}
+                />
+                <PanelRow
+                  label="موتورسیکلت"
+                  value={formatStatValue(stats.bikes)}
+                />
               </PanelCard>
             </motion.aside>
           </section>
@@ -303,12 +412,10 @@ function SidebarItem({
 function StatCard({
   title,
   value,
-  desc,
   icon,
 }: {
   title: string;
   value: string;
-  desc: string;
   icon: ReactNode;
 }) {
   return (
@@ -321,9 +428,6 @@ function StatCard({
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
           <p className="mt-2 text-2xl font-bold">{value}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {desc}
-          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 p-3 text-orange-500 dark:border-slate-800">
@@ -364,17 +468,6 @@ function PanelRow({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <span className="text-sm font-medium">{value}</span>
-    </div>
-  );
-}
-
-function EventItem({ title, time }: { title: string; time: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 px-4 py-3 dark:border-slate-800">
-      <div className="text-sm font-medium">{title}</div>
-      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        {time}
-      </div>
     </div>
   );
 }
