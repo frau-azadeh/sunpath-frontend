@@ -7,10 +7,11 @@ import { usePathname } from 'next/navigation';
 
 import {
   Bell,
+  Car,
   LayoutDashboard,
-  Map as MapIcon,
+  Map,
   Settings,
-  Truck,
+  Users,
   X,
 } from 'lucide-react';
 
@@ -18,27 +19,32 @@ const navigationItems = [
   {
     href: '/',
     label: 'داشبورد',
-    icon: <LayoutDashboard size={20} />,
+    icon: <LayoutDashboard size={22} strokeWidth={1.5} />,
   },
   {
     href: '/map',
     label: 'مانیتورینگ زنده',
-    icon: <MapIcon size={20} />,
+    icon: <Map size={22} strokeWidth={1.5} />,
   },
   {
     href: '/drivers',
     label: 'رانندگان',
-    icon: <Truck size={20} />,
+    icon: <Users size={22} strokeWidth={1.5} />,
+  },
+  {
+    href: '/vehicles',
+    label: 'خودروها',
+    icon: <Car size={22} strokeWidth={1.5} />,
   },
   {
     href: '/alerts',
     label: 'هشدارها',
-    icon: <Bell size={20} />,
+    icon: <Bell size={22} strokeWidth={1.5} />,
   },
   {
     href: '/settings',
     label: 'تنظیمات',
-    icon: <Settings size={20} />,
+    icon: <Settings size={22} strokeWidth={1.5} />,
   },
 ];
 
@@ -54,12 +60,14 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       <div className="mb-8 flex items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-3">
           <div className="rounded-xl border border-slate-200 p-2 dark:border-slate-800">
-            <Truck className="text-orange-500" size={22} />
+            <Car className="text-orange-500" size={24} strokeWidth={2} />
           </div>
 
-          <div>
-            <h1 className="text-xl font-bold">SunPath</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              SunPath
+            </h1>
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               Fleet Tracking System
             </p>
           </div>
@@ -68,7 +76,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         {onNavigate && (
           <button
             onClick={onNavigate}
-            className="rounded-xl border border-slate-200 p-2 text-slate-600 dark:border-slate-800 dark:text-slate-300 lg:hidden"
+            className="rounded-xl border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
             aria-label="بستن منو"
             type="button"
           >
@@ -77,7 +85,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex flex-col gap-2">
+      <nav className="flex flex-col gap-1.5">
         {navigationItems.map((item) => (
           <SidebarItem
             key={item.href}
@@ -94,11 +102,16 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-        <p className="text-sm font-medium">سیستم مدیریت ناوگان</p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          نسخه ۱.۰.۰
+      <div className="mt-auto overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800/50 dark:bg-slate-900/30">
+        <p className="text-xs font-bold text-slate-900 dark:text-white">
+          سیستم مدیریت ناوگان
         </p>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+            نسخه ۱.۰.۰
+          </p>
+          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+        </div>
       </div>
     </>
   );
@@ -122,14 +135,16 @@ function SidebarItem({
       href={href}
       onClick={onClick}
       className={[
-        'flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition-colors',
+        'flex cursor-pointer items-center gap-3 rounded-[20px] border px-4 py-3.5 transition-all duration-200',
         active
-          ? 'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-400'
-          : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:hover:border-slate-800 dark:hover:bg-slate-800/60',
+          ? 'border-orange-100 bg-orange-50/80 text-orange-600 shadow-sm shadow-orange-200/20 dark:border-orange-900/30 dark:bg-orange-950/20 dark:text-orange-400 dark:shadow-none'
+          : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200',
       ].join(' ')}
     >
-      {icon}
-      <span className="hidden font-medium lg:block">{label}</span>
+      <span className={active ? 'text-orange-600 dark:text-orange-400' : ''}>
+        {icon}
+      </span>
+      <span className="text-sm font-bold">{label}</span>
     </Link>
   );
 }
