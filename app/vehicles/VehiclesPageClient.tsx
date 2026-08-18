@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -453,7 +459,11 @@ export default function VehiclesPageClientPageClient({
         <header className="flex flex-col gap-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
-              {activeTab === 'vehicles' ? <Car size={28} /> : <Users size={28} />}
+              {activeTab === 'vehicles' ? (
+                <Car size={28} />
+              ) : (
+                <Users size={28} />
+              )}
             </div>
 
             <div>
@@ -710,7 +720,9 @@ export default function VehiclesPageClientPageClient({
                     {vehiclesState === 'loading' ? (
                       <LoadingState text="در حال دریافت لیست خودروها..." />
                     ) : vehiclesState === 'error' ? (
-                      <ErrorState onRetry={() => void handleRefreshVehicles()} />
+                      <ErrorState
+                        onRetry={() => void handleRefreshVehicles()}
+                      />
                     ) : filteredVehicles.length === 0 ? (
                       <EmptyState
                         hasFilter={hasActiveVehicleFilters}
