@@ -8,15 +8,14 @@ import { usePathname } from 'next/navigation';
 import {
   Bell,
   Car,
+  CarFront,
   LayoutDashboard,
   Map,
   Settings,
-  CarFront,
-
   X,
 } from 'lucide-react';
 
- const navigationItems = [
+const navigationItems = [
   {
     href: '/',
     label: 'داشبورد',
@@ -43,7 +42,6 @@ import {
     icon: <Settings size={22} strokeWidth={1.5} />,
   },
 ];
-
 
 interface SidebarProps {
   onNavigate?: () => void;
