@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bike,
@@ -17,8 +18,14 @@ import gregorian from 'react-date-object/calendars/gregorian';
 import persian from 'react-date-object/calendars/persian';
 import gregorianEn from 'react-date-object/locales/gregorian_en';
 import persianFa from 'react-date-object/locales/persian_fa';
+import { Controller, useForm } from 'react-hook-form';
 import DatePicker, { DateObject } from 'react-multi-date-picker';
 
+import {
+  type VehicleFormInput,
+  type VehicleFormValues,
+  vehicleFormSchema,
+} from '@/app/schemas/vehicle.schema';
 import type {
   CreateVehicleRequest,
   Vehicle,
@@ -34,9 +41,22 @@ interface VehicleFormModalProps {
   isSubmitting: boolean;
 }
 
-const createInitialFormData = (
-  vehicle: Vehicle | null,
-): CreateVehicleRequest => ({
+interface FormFieldProps {
+  id: string;
+  label: string;
+  error?: string;
+  children: ReactNode;
+}
+
+interface StatusButtonProps {
+  label: string;
+  icon: ReactNode;
+  isSelected: boolean;
+  onClick: () => void;
+  activeClassName: string;
+}
+
+const getDefaultValues = (vehicle: Vehicle | null): VehicleFormInput => ({
   plateNumber: vehicle?.plateNumber ?? '',
   model: vehicle?.model ?? '',
   status: vehicle?.status ?? 0,
@@ -49,17 +69,35 @@ const createInitialFormData = (
 });
 
 const getPersianDateValue = (date: string | null | undefined) => {
-  if (!date) {
-    return undefined;
-  }
+  if (!date) return undefined;
 
   return new DateObject({
-    date: date.slice(0, 10),
+    date,
     format: 'YYYY-MM-DD',
     calendar: gregorian,
     locale: gregorianEn,
   }).convert(persian, persianFa);
 };
+
+const inputBaseClassName =
+  'w-full rounded-xl border bg-orange-50/30 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-950 dark:text-white';
+
+const normalInputClassName =
+  'border-orange-100 hover:border-orange-300 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-700 dark:hover:border-orange-900 dark:focus:border-orange-500 dark:focus:bg-slate-950';
+
+const errorInputClassName =
+  'border-red-500 bg-red-50/40 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 dark:border-red-500 dark:bg-red-950/10';
+
+const vehicleTypes: Array<{
+  value: VehicleType;
+  label: string;
+  icon: typeof Car;
+}> = [
+  { value: 0, label: 'سواری', icon: Car },
+  { value: 1, label: 'وانت / نیسان', icon: Truck },
+  { value: 2, label: 'کامیون / تریلی', icon: Truck },
+  { value: 3, label: 'موتورسیکلت', icon: Bike },
+];
 
 export function VehicleFormModal({
   isOpen,
@@ -68,59 +106,57 @@ export function VehicleFormModal({
   initialData,
   isSubmitting,
 }: VehicleFormModalProps) {
-  // ۱. کنترل محلی state با مقایسه تغییر پروپ (پروسه همگام‌سازی مستقیم در رندر)
-  const [prevInitialData, setPrevInitialData] = useState<Vehicle | null>(null);
-  const [prevIsOpen, setPrevIsOpen] = useState<boolean>(false);
-  const [formData, setFormData] = useState<CreateVehicleRequest>(() =>
-    createInitialFormData(initialData),
-  );
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<VehicleFormInput, unknown, VehicleFormValues>({
+    resolver: zodResolver(vehicleFormSchema),
+    defaultValues: getDefaultValues(initialData),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+  });
 
-  // اگر مودال باز شده یا دیتای اولیه تغییر کرده باشد، استیت فرم بدون نیاز به useEffect همگام می‌شود
-  if (initialData !== prevInitialData || isOpen !== prevIsOpen) {
-    setPrevInitialData(initialData);
-    setPrevIsOpen(isOpen);
+  useEffect(() => {
     if (isOpen) {
-      setFormData(createInitialFormData(initialData));
+      reset(getDefaultValues(initialData));
     }
-  }
+  }, [initialData, isOpen, reset]);
 
   const handleClose = () => {
-    if (!isSubmitting) {
-      onClose();
-    }
+    if (isSubmitting) return;
+
+    reset(getDefaultValues(initialData));
+    onClose();
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleFormSubmit = async (data: VehicleFormValues) => {
+    const request: CreateVehicleRequest = {
+      plateNumber: data.plateNumber,
+      model: data.model,
+      vehicleType: data.vehicleType,
+      status: data.status,
+      insuranceNumber: data.insuranceNumber,
+      insuranceExpiryDate: data.insuranceExpiryDate,
+      currentDriverId: data.currentDriverId,
+    };
 
-    await onSubmit({
-      ...formData,
-      plateNumber: formData.plateNumber.trim(),
-      model: formData.model?.trim() || null,
-      insuranceNumber: formData.insuranceNumber?.trim() || null,
-      insuranceExpiryDate: formData.insuranceExpiryDate || null,
-    });
+    await onSubmit(request);
   };
-
-  const vehicleTypes: Array<{
-    value: VehicleType;
-    label: string;
-    icon: typeof Car;
-  }> = [
-    { value: 0, label: 'سواری', icon: Car },
-    { value: 1, label: 'وانت / نیسان', icon: Truck },
-    { value: 2, label: 'کامیون / تریلی', icon: Truck },
-    { value: 3, label: 'موتورسیکلت', icon: Bike },
-  ];
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-vazir">
+        <div
+          dir="rtl"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-vazir"
+        >
           <motion.button
             type="button"
             aria-label="بستن مودال"
-            className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-sm"
+            className="absolute inset-0 cursor-default bg-slate-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -131,15 +167,17 @@ export function VehicleFormModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="vehicle-form-title"
-            className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 16 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-orange-100 bg-white shadow-2xl shadow-orange-950/10 dark:border-orange-950/60 dark:bg-slate-900"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 p-5 dark:border-slate-800 sm:p-6">
+            <div className="h-1.5 bg-orange-500" />
+
+            <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/40 p-5 dark:border-slate-800 dark:bg-orange-950/10 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
                   <Car size={22} />
                 </div>
 
@@ -162,231 +200,252 @@ export function VehicleFormModal({
                 onClick={handleClose}
                 disabled={isSubmitting}
                 aria-label="بستن"
-                className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-orange-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
               >
                 <X size={21} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 p-5 sm:p-6">
+            <form
+              noValidate
+              onSubmit={handleSubmit(handleFormSubmit)}
+              className="space-y-5 p-5 sm:p-6"
+            >
               <div className="grid gap-5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="plateNumber"
-                    className="text-sm font-bold text-slate-700 dark:text-slate-200"
-                  >
-                    شماره پلاک
-                  </label>
-
+                <FormField
+                  id="plateNumber"
+                  label="شماره پلاک"
+                  error={errors.plateNumber?.message}
+                >
                   <input
                     id="plateNumber"
-                    required
-                    value={formData.plateNumber}
-                    onChange={(event) =>
-                      setFormData((previous) => ({
-                        ...previous,
-                        plateNumber: event.target.value,
-                      }))
-                    }
+                    type="text"
+                    dir="rtl"
+                    disabled={isSubmitting}
                     placeholder="مثال: ۱۲ ب ۳۴۵ ایران ۱۱"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-500"
+                    aria-invalid={Boolean(errors.plateNumber)}
+                    className={`${inputBaseClassName} ${
+                      errors.plateNumber
+                        ? errorInputClassName
+                        : normalInputClassName
+                    }`}
+                    {...register('plateNumber')}
                   />
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="model"
-                    className="text-sm font-bold text-slate-700 dark:text-slate-200"
-                  >
-                    مدل خودرو
-                  </label>
-
+                <FormField
+                  id="model"
+                  label="مدل خودرو"
+                  error={errors.model?.message}
+                >
                   <input
                     id="model"
-                    value={formData.model ?? ''}
-                    onChange={(event) =>
-                      setFormData((previous) => ({
-                        ...previous,
-                        model: event.target.value,
-                      }))
-                    }
+                    type="text"
+                    disabled={isSubmitting}
                     placeholder="مثال: پژو پارس، ولوو FH"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-500"
+                    aria-invalid={Boolean(errors.model)}
+                    className={`${inputBaseClassName} ${
+                      errors.model ? errorInputClassName : normalInputClassName
+                    }`}
+                    {...register('model')}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  نوع وسیله نقلیه
-                </p>
+              <Controller
+                control={control}
+                name="vehicleType"
+                render={({ field }) => (
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      نوع وسیله نقلیه
+                    </p>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {vehicleTypes.map((vehicleType) => {
-                    const Icon = vehicleType.icon;
-                    const isSelected =
-                      formData.vehicleType === vehicleType.value;
+                    <div
+                      role="radiogroup"
+                      aria-label="نوع وسیله نقلیه"
+                      className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+                    >
+                      {vehicleTypes.map((vehicleType) => {
+                        const Icon = vehicleType.icon;
+                        const isSelected = field.value === vehicleType.value;
 
-                    return (
-                      <button
-                        key={vehicleType.value}
-                        type="button"
-                        onClick={() =>
-                          setFormData((previous) => ({
-                            ...previous,
-                            vehicleType: vehicleType.value,
-                          }))
-                        }
-                        className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-bold transition-colors ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
-                            : 'border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-blue-800'
-                        }`}
+                        return (
+                          <button
+                            key={vehicleType.value}
+                            type="button"
+                            role="radio"
+                            disabled={isSubmitting}
+                            aria-checked={isSelected}
+                            onClick={() => field.onChange(vehicleType.value)}
+                            className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                              isSelected
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-4 ring-orange-500/10 dark:bg-orange-500/10 dark:text-orange-400'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-orange-300 hover:bg-orange-50/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-orange-900'
+                            }`}
+                          >
+                            <Icon size={21} />
+                            <span>{vehicleType.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {errors.vehicleType?.message && (
+                      <p
+                        role="alert"
+                        className="text-xs font-medium text-red-600 dark:text-red-400"
                       >
-                        <Icon size={21} />
-                        <span>{vehicleType.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        {errors.vehicleType.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="insuranceNumber"
-                    className="text-sm font-bold text-slate-700 dark:text-slate-200"
-                  >
-                    شماره بیمه‌نامه
-                  </label>
-
+                <FormField
+                  id="insuranceNumber"
+                  label="شماره بیمه‌نامه"
+                  error={errors.insuranceNumber?.message}
+                >
                   <input
                     id="insuranceNumber"
-                    value={formData.insuranceNumber ?? ''}
-                    onChange={(event) =>
-                      setFormData((previous) => ({
-                        ...previous,
-                        insuranceNumber: event.target.value,
-                      }))
-                    }
+                    type="text"
+                    disabled={isSubmitting}
                     placeholder="شماره بیمه‌نامه"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-500"
+                    aria-invalid={Boolean(errors.insuranceNumber)}
+                    className={`${inputBaseClassName} ${
+                      errors.insuranceNumber
+                        ? errorInputClassName
+                        : normalInputClassName
+                    }`}
+                    {...register('insuranceNumber')}
                   />
-                </div>
+                </FormField>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="insuranceExpiryDate"
-                    className="text-sm font-bold text-slate-700 dark:text-slate-200"
-                  >
-                    تاریخ انقضای بیمه
-                  </label>
+                <FormField
+                  id="insuranceExpiryDate"
+                  label="تاریخ انقضای بیمه"
+                  error={errors.insuranceExpiryDate?.message}
+                >
+                  <Controller
+                    control={control}
+                    name="insuranceExpiryDate"
+                    render={({ field }) => {
+                      const insuranceExpiryDate =
+                        typeof field.value === 'string' ? field.value : '';
 
-                  <DatePicker
-                    value={getPersianDateValue(formData.insuranceExpiryDate)}
-                    onChange={(date) => {
-                      const selectedDate = Array.isArray(date) ? date[0] : date;
+                      return (
+                        <DatePicker
+                          value={getPersianDateValue(insuranceExpiryDate)}
+                          calendar={persian}
+                          locale={persianFa}
+                          format="YYYY/MM/DD"
+                          calendarPosition="bottom-right"
+                          editable={false}
+                          onChange={(date) => {
+                            const selectedDate = Array.isArray(date)
+                              ? date[0]
+                              : date;
 
-                      setFormData((previous) => ({
-                        ...previous,
-                        insuranceExpiryDate: selectedDate
-                          ? selectedDate
-                              .convert(gregorian, gregorianEn)
-                              .format('YYYY-MM-DD')
-                          : '',
-                      }));
-                    }}
-                    calendar={persian}
-                    locale={persianFa}
-                    format="YYYY/MM/DD"
-                    calendarPosition="bottom-right"
-                    editable={false}
-                    render={(value, openCalendar) => (
-                      <button
-                        id="insuranceExpiryDate"
-                        type="button"
-                        onClick={openCalendar}
-                        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-right text-sm font-medium text-slate-800 outline-none transition-colors hover:border-blue-300 focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:border-blue-800"
-                      >
-                        <span
-                          className={
-                            value
-                              ? 'text-slate-800 dark:text-white'
-                              : 'text-slate-400'
-                          }
-                        >
-                          {value || 'انتخاب تاریخ شمسی'}
-                        </span>
+                            const gregorianDate = selectedDate
+                              ? selectedDate
+                                  .convert(gregorian, gregorianEn)
+                                  .format('YYYY-MM-DD')
+                              : '';
 
-                        <CalendarDays
-                          size={18}
-                          className="shrink-0 text-slate-400"
+                            field.onChange(gregorianDate);
+                          }}
+                          render={(value, openCalendar) => (
+                            <button
+                              id="insuranceExpiryDate"
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={openCalendar}
+                              aria-describedby={
+                                errors.insuranceExpiryDate
+                                  ? 'insuranceExpiryDate-error'
+                                  : undefined
+                              }
+                              className={`${inputBaseClassName} flex items-center justify-between text-right ${
+                                errors.insuranceExpiryDate
+                                  ? errorInputClassName
+                                  : normalInputClassName
+                              }`}
+                            >
+                              <span
+                                className={
+                                  value
+                                    ? 'text-slate-800 dark:text-white'
+                                    : 'text-slate-400'
+                                }
+                              >
+                                {value || 'انتخاب تاریخ شمسی'}
+                              </span>
+
+                              <CalendarDays
+                                size={18}
+                                className="shrink-0 text-orange-500"
+                              />
+                            </button>
+                          )}
+                          containerClassName="w-full"
                         />
-                      </button>
-                    )}
-                    containerClassName="w-full"
+                      );
+                    }}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  وضعیت خودرو
-                </p>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      وضعیت خودرو
+                    </p>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((previous) => ({
-                        ...previous,
-                        status: 1 as VehicleStatus,
-                      }))
-                    }
-                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors ${
-                      formData.status === 1
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                        : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <CheckCircle2 size={18} />
-                    فعال
-                  </button>
+                    <div
+                      role="radiogroup"
+                      aria-label="وضعیت خودرو"
+                      className="grid grid-cols-2 gap-3"
+                    >
+                      <StatusButton
+                        label="فعال"
+                        icon={<CheckCircle2 size={18} />}
+                        isSelected={field.value === 1}
+                        onClick={() => field.onChange(1 as VehicleStatus)}
+                        activeClassName="border-orange-500 bg-orange-50 text-orange-700 ring-4 ring-orange-500/10 dark:bg-orange-500/10 dark:text-orange-400"
+                      />
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((previous) => ({
-                        ...previous,
-                        status: 0 as VehicleStatus,
-                      }))
-                    }
-                    className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors ${
-                      formData.status === 0
-                        ? 'border-slate-500 bg-slate-100 text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200'
-                        : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <X size={18} />
-                    غیرفعال
-                  </button>
-                </div>
-              </div>
+                      <StatusButton
+                        label="غیرفعال"
+                        icon={<X size={18} />}
+                        isSelected={field.value === 0}
+                        onClick={() => field.onChange(0 as VehicleStatus)}
+                        activeClassName="border-slate-500 bg-slate-100 text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  </div>
+                )}
+              />
 
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 dark:border-slate-800 sm:flex-row">
+              <div className="flex flex-col-reverse gap-3 border-t border-orange-100 pt-5 dark:border-slate-800 sm:flex-row">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3.5 text-sm font-bold text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-orange-900 dark:hover:bg-orange-950/20"
                 >
                   انصراف
                 </button>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSubmitting || !isValid}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-bold text-white transition-colors hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-500/20 disabled:cursor-not-allowed disabled:bg-orange-300 disabled:opacity-60 dark:disabled:bg-orange-950"
                 >
                   {isSubmitting ? (
                     <Loader2 size={19} className="animate-spin" />
@@ -394,7 +453,11 @@ export function VehicleFormModal({
                     <Save size={19} />
                   )}
 
-                  {initialData ? 'ذخیره تغییرات' : 'ثبت خودرو'}
+                  {isSubmitting
+                    ? 'در حال ذخیره...'
+                    : initialData
+                      ? 'ذخیره تغییرات'
+                      : 'ثبت خودرو'}
                 </button>
               </div>
             </form>
@@ -402,5 +465,55 @@ export function VehicleFormModal({
         </div>
       )}
     </AnimatePresence>
+  );
+}
+
+function FormField({ id, label, error, children }: FormFieldProps) {
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={id}
+        className="text-sm font-bold text-slate-700 dark:text-slate-200"
+      >
+        {label}
+      </label>
+
+      {children}
+
+      {error && (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="text-xs font-medium text-red-600 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StatusButton({
+  label,
+  icon,
+  isSelected,
+  onClick,
+  activeClassName,
+}: StatusButtonProps) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={isSelected}
+      onClick={onClick}
+      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors ${
+        isSelected
+          ? activeClassName
+          : 'border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50/50 dark:border-slate-700 dark:text-slate-400 dark:hover:border-orange-900 dark:hover:bg-orange-950/20'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
