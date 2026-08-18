@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -13,23 +19,39 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  User,
+  UserPlus,
+  Users,
   X,
 } from 'lucide-react';
 
+import { DriverFormModal } from '@/components/drivers/DriverFormModal';
+import { DriverStats } from '@/components/drivers/DriverStats';
+import { DriverTableRow } from '@/components/drivers/DriverTableRow';
 import { VehicleFormModal } from '@/components/vehicles/VehicleFormModal';
 import { VehicleStats } from '@/components/vehicles/VehicleStats';
 import { VehicleTableRow } from '@/components/vehicles/VehicleTableRow';
 import { faNumber } from '@/lib/format';
+import { driverService } from '@/services/driverService';
 import { vehicleService } from '@/services/vehicleService';
+import type {
+  CreateDriverRequest,
+  Driver,
+  UpdateDriverRequest,
+} from '@/types/driver';
 import type { CreateVehicleRequest, Vehicle } from '@/types/vehicle';
 
+type ActiveTab = 'vehicles' | 'drivers';
 type LoadState = 'loading' | 'error' | 'success';
-
 type VehicleStatusFilter = 'all' | 'active' | 'inactive';
-
 type VehicleTypeFilter = 'all' | '0' | '1' | '2' | '3';
 
-const getErrorMessage = (error: unknown): string => {
+interface Props {
+  initialDrivers: Driver[];
+  initialDriversError: boolean;
+}
+
+function getErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
     return 'خطای پیش‌بینی‌نشده‌ای رخ داد.';
   }
@@ -72,7 +94,7 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   return message;
-};
+}
 
 const normalizeText = (value: string): string => {
   return value
@@ -82,60 +104,64 @@ const normalizeText = (value: string): string => {
     .replace(/[٠-٩]/g, (character) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(character)));
 };
 
-export default function VehiclesPageClient() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [state, setState] = useState<LoadState>('loading');
+export default function VehiclesPageClientPageClient({
+  initialDrivers,
+  initialDriversError,
+}: Props) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('vehicles');
 
-  const [search, setSearch] = useState('');
+  // --- وضعیت‌های مربوط به خودروها ---
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesState, setVehiclesState] = useState<LoadState>('loading');
+  const [vehicleSearch, setVehicleSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatusFilter>('all');
   const [typeFilter, setTypeFilter] = useState<VehicleTypeFilter>('all');
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isRefreshingVehicles, setIsRefreshingVehicles] = useState(false);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
   const [vehiclePendingDelete, setVehiclePendingDelete] =
     useState<Vehicle | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingVehicle, setIsDeletingVehicle] = useState(false);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
 
-  const [operationError, setOperationError] = useState<string | null>(null);
+  // --- وضعیت‌های مربوط به رانندگان ---
+  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+  const [driversState, setDriversState] = useState<LoadState>(
+    initialDriversError ? 'error' : 'success',
+  );
+  const [driverSearch, setDriverSearch] = useState('');
+  const [isRefreshingDrivers, setIsRefreshingDrivers] = useState(false);
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [isSubmittingDriver, setIsSubmittingDriver] = useState(false);
+  const [driverPendingDelete, setDriverPendingDelete] = useState<Driver | null>(
+    null,
+  );
+  const [isDeletingDriver, setIsDeletingDriver] = useState(false);
+  const [driverError, setDriverError] = useState<string | null>(null);
 
-  // تابع بارگذاری داده‌ها که فقط بعد از await، state را تغییر می‌دهد
+  // ==================== عملیات خودروها ====================
   const loadVehicles = useCallback(
     async (withRefreshLoader = false): Promise<void> => {
-      // ❗ نکته: این دو setState قبل از await انجام می‌شوند
-      // برای جلوگیری از خطای react-hooks/set-state-in-effect،
-      // باید این setState ها فقط بعد از اتمام عملیات async انجام شوند.
-      // اما چون این تابع ممکن است از جای دیگر هم صدا زده شود،
-      // برای جلوگیری از خطا از الگوی زیر استفاده می‌کنیم.
-
       try {
         const data = await vehicleService.getAll();
-
         setVehicles(Array.isArray(data) ? data : []);
-        setState('success');
-        setOperationError(null);
+        setVehiclesState('success');
+        setVehicleError(null);
       } catch (error: unknown) {
-        setOperationError(getErrorMessage(error));
-        setState('error');
+        setVehicleError(getErrorMessage(error));
+        setVehiclesState('error');
       } finally {
         if (withRefreshLoader) {
-          setIsRefreshing(false);
+          setIsRefreshingVehicles(false);
         }
       }
     },
     [],
   );
 
-  // بارگذاری اولیه فقط یک‌بار در mount کامپوننت
-  // برای جلوگیری از خطای set-state-in-effect،
-  // setState های اولیه (loading) را از تابع loadVehicles حذف کردیم
-  // و مقدار state اولیه را به 'loading' ست کردیم
   useEffect(() => {
-    // ✅ اینجا هیچ setState سنکرونی قبل از await انجام نمی‌شود
-    // بنابراین ESLint خطا نمی‌دهد
     let isMounted = true;
 
     const fetchInitialData = async () => {
@@ -143,13 +169,13 @@ export default function VehiclesPageClient() {
         const data = await vehicleService.getAll();
         if (isMounted) {
           setVehicles(Array.isArray(data) ? data : []);
-          setState('success');
-          setOperationError(null);
+          setVehiclesState('success');
+          setVehicleError(null);
         }
       } catch (error: unknown) {
         if (isMounted) {
-          setOperationError(getErrorMessage(error));
-          setState('error');
+          setVehicleError(getErrorMessage(error));
+          setVehiclesState('error');
         }
       }
     };
@@ -159,10 +185,10 @@ export default function VehiclesPageClient() {
     return () => {
       isMounted = false;
     };
-  }, []); // خالی یعنی فقط یک‌بار اجرا می‌شود
+  }, []);
 
   const filteredVehicles = useMemo(() => {
-    const normalizedQuery = normalizeText(search);
+    const normalizedQuery = normalizeText(vehicleSearch);
 
     return vehicles.filter((vehicle) => {
       const searchableValues = [
@@ -188,9 +214,9 @@ export default function VehiclesPageClient() {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [vehicles, search, statusFilter, typeFilter]);
+  }, [vehicles, vehicleSearch, statusFilter, typeFilter]);
 
-  const stats = useMemo(
+  const vehicleStatsData = useMemo(
     () => ({
       total: vehicles.length,
       active: vehicles.filter((vehicle) => vehicle.status === 1).length,
@@ -203,85 +229,60 @@ export default function VehiclesPageClient() {
     [vehicles],
   );
 
-  const handleRetry = async (): Promise<void> => {
-    setState('loading');
-    await loadVehicles();
-  };
-
-  const handleRefresh = async (): Promise<void> => {
-    setIsRefreshing(true);
+  const handleRefreshVehicles = async (): Promise<void> => {
+    setIsRefreshingVehicles(true);
     await loadVehicles(true);
   };
 
-  const handleOpenCreate = (): void => {
+  const handleOpenCreateVehicle = (): void => {
     setSelectedVehicle(null);
-    setOperationError(null);
-    setIsFormModalOpen(true);
+    setVehicleError(null);
+    setIsVehicleModalOpen(true);
   };
 
-  const handleOpenEdit = (vehicle: Vehicle): void => {
+  const handleOpenEditVehicle = (vehicle: Vehicle): void => {
     setSelectedVehicle(vehicle);
-    setOperationError(null);
-    setIsFormModalOpen(true);
+    setVehicleError(null);
+    setIsVehicleModalOpen(true);
   };
 
-  const handleCloseFormModal = (): void => {
-    if (isSubmitting) {
-      return;
-    }
-
-    setIsFormModalOpen(false);
+  const handleCloseVehicleModal = (): void => {
+    if (isSubmittingVehicle) return;
+    setIsVehicleModalOpen(false);
     setSelectedVehicle(null);
-    setOperationError(null);
+    setVehicleError(null);
   };
 
-  const handleSubmit = async (data: CreateVehicleRequest): Promise<void> => {
-    setIsSubmitting(true);
-    setOperationError(null);
+  const handleVehicleSubmit = async (
+    data: CreateVehicleRequest,
+  ): Promise<void> => {
+    setIsSubmittingVehicle(true);
+    setVehicleError(null);
 
     try {
       if (selectedVehicle) {
-        // ۱. عملیات ویرایش
         await vehicleService.update(selectedVehicle.id, data);
       } else {
-        // ۲. عملیات ثبت جدید
         await vehicleService.create(data);
       }
 
-      // بعد از هر دو عملیات، لیست را دوباره از سرور لود می‌کنیم
       await loadVehicles(true);
-
-      setIsFormModalOpen(false);
+      setIsVehicleModalOpen(false);
       setSelectedVehicle(null);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
-      setOperationError(message);
+      setVehicleError(message);
       throw new Error(message);
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingVehicle(false);
     }
   };
 
-  const handleRequestDelete = (vehicle: Vehicle): void => {
-    setOperationError(null);
-    setVehiclePendingDelete(vehicle);
-  };
+  const handleConfirmDeleteVehicle = async (): Promise<void> => {
+    if (!vehiclePendingDelete) return;
 
-  const handleCancelDelete = (): void => {
-    if (isDeleting) {
-      return;
-    }
-
-    setVehiclePendingDelete(null);
-  };
-
-  const handleConfirmDelete = async (): Promise<void> => {
-    if (!vehiclePendingDelete) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setOperationError(null);
+    setIsDeletingVehicle(true);
+    setVehicleError(null);
 
     try {
       await vehicleService.remove(vehiclePendingDelete.id);
@@ -294,74 +295,301 @@ export default function VehiclesPageClient() {
 
       if (selectedVehicle?.id === vehiclePendingDelete.id) {
         setSelectedVehicle(null);
-        setIsFormModalOpen(false);
+        setIsVehicleModalOpen(false);
       }
 
       setVehiclePendingDelete(null);
     } catch (error: unknown) {
-      setOperationError(getErrorMessage(error));
+      setVehicleError(getErrorMessage(error));
     } finally {
-      setIsDeleting(false);
+      setIsDeletingVehicle(false);
     }
   };
 
-  const clearFilters = (): void => {
-    setSearch('');
+  const clearVehicleFilters = (): void => {
+    setVehicleSearch('');
     setStatusFilter('all');
     setTypeFilter('all');
   };
 
-  const hasActiveFilters =
-    search.trim().length > 0 || statusFilter !== 'all' || typeFilter !== 'all';
+  const hasActiveVehicleFilters =
+    vehicleSearch.trim().length > 0 ||
+    statusFilter !== 'all' ||
+    typeFilter !== 'all';
+
+  // ==================== عملیات رانندگان ====================
+  const loadDrivers = async (withRefreshLoader = false): Promise<void> => {
+    if (withRefreshLoader) setIsRefreshingDrivers(true);
+    else setDriversState('loading');
+
+    setDriverError(null);
+
+    try {
+      const data = await driverService.getAll();
+      setDrivers(data);
+      setDriversState('success');
+    } catch (error: unknown) {
+      setDriverError(getErrorMessage(error));
+      setDriversState('error');
+    } finally {
+      if (withRefreshLoader) setIsRefreshingDrivers(false);
+    }
+  };
+
+  const filteredDrivers = useMemo(() => {
+    const query = driverSearch.trim().toLocaleLowerCase('fa');
+
+    if (!query) return drivers;
+
+    return drivers.filter((driver) => {
+      const fullName =
+        `${driver.firstName} ${driver.lastName}`.toLocaleLowerCase('fa');
+      const nationalId = driver.nationalId.toLocaleLowerCase('fa');
+      const phone = driver.phone.toLocaleLowerCase('fa');
+
+      return (
+        fullName.includes(query) ||
+        nationalId.includes(query) ||
+        phone.includes(query)
+      );
+    });
+  }, [drivers, driverSearch]);
+
+  const driverStatsData = useMemo(
+    () => ({
+      total: drivers.length,
+      licensed: drivers.filter((driver) => driver.licenseType >= 1).length,
+      active: drivers.filter((driver) => driver.licenseType >= 2).length,
+    }),
+    [drivers],
+  );
+
+  const handleOpenCreateDriver = () => {
+    setSelectedDriver(null);
+    setDriverError(null);
+    setIsDriverModalOpen(true);
+  };
+
+  const handleOpenEditDriver = (driver: Driver) => {
+    setSelectedDriver(driver);
+    setDriverError(null);
+    setIsDriverModalOpen(true);
+  };
+
+  const handleCloseDriverModal = () => {
+    if (isSubmittingDriver) return;
+    setIsDriverModalOpen(false);
+    setSelectedDriver(null);
+    setDriverError(null);
+  };
+
+  const handleDriverSubmit = async (data: CreateDriverRequest) => {
+    setIsSubmittingDriver(true);
+    setDriverError(null);
+
+    try {
+      if (selectedDriver) {
+        const updateRequest: UpdateDriverRequest = {
+          id: selectedDriver.id,
+          ...data,
+        };
+
+        await driverService.update(selectedDriver.id, updateRequest);
+
+        const updatedDriver: Driver = {
+          ...selectedDriver,
+          ...data,
+        };
+
+        setDrivers((currentDrivers) =>
+          currentDrivers.map((driver) =>
+            driver.id === selectedDriver.id ? updatedDriver : driver,
+          ),
+        );
+      } else {
+        const createdDriver = await driverService.create(data);
+
+        setDrivers((currentDrivers) => [
+          createdDriver,
+          ...currentDrivers.filter((driver) => driver.id !== createdDriver.id),
+        ]);
+      }
+
+      setIsDriverModalOpen(false);
+      setSelectedDriver(null);
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      setDriverError(message);
+      throw new Error(message);
+    } finally {
+      setIsSubmittingDriver(false);
+    }
+  };
+
+  const handleConfirmDeleteDriver = async () => {
+    if (!driverPendingDelete) return;
+
+    setIsDeletingDriver(true);
+    setDriverError(null);
+
+    try {
+      await driverService.remove(driverPendingDelete.id);
+
+      setDrivers((currentDrivers) =>
+        currentDrivers.filter((driver) => driver.id !== driverPendingDelete.id),
+      );
+
+      if (selectedDriver?.id === driverPendingDelete.id) {
+        setSelectedDriver(null);
+        setIsDriverModalOpen(false);
+      }
+
+      setDriverPendingDelete(null);
+    } catch (error: unknown) {
+      setDriverError(getErrorMessage(error));
+    } finally {
+      setIsDeletingDriver(false);
+    }
+  };
 
   return (
     <>
       <div dir="rtl" className="flex flex-col gap-6 font-vazir">
-        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* ================= Header و نوار تب‌ها ================= */}
+        <header className="flex flex-col gap-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 md:block">
-              <Car className="text-orange-500" size={24} />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+              {activeTab === 'vehicles' ? (
+                <Car size={28} />
+              ) : (
+                <Users size={28} />
+              )}
             </div>
 
             <div>
-              <h1 className="text-xl font-black text-slate-900 dark:text-white">
-                مدیریت خودروها
-              </h1>
-
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black text-slate-900 dark:text-white">
+                  مدیریت جامع ناوگان و رانندگان
+                </h1>
+                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
+                  SunPath Fleet
+                </span>
+              </div>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                لیست کامل و وضعیت خودروهای ناوگان
+                پایش، ثبت و کنترل وضعیت ناوگان خودرویی و کادر رانندگان
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void handleRefresh()}
-              disabled={isRefreshing}
-              aria-label="به‌روزرسانی خودروها"
-              title="به‌روزرسانی"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              <RefreshCw
-                size={18}
-                className={isRefreshing ? 'animate-spin' : ''}
-              />
-            </button>
+          {/* تب‌ها و دکمه Action بر اساس تب فعال */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* انتخاب‌گر تب با انیمیشن روان */}
+            <div className="flex rounded-2xl border border-slate-200 bg-slate-100/80 p-1.5 dark:border-slate-800 dark:bg-slate-950">
+              <button
+                type="button"
+                onClick={() => setActiveTab('vehicles')}
+                className={`relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
+                  activeTab === 'vehicles'
+                    ? 'text-orange-700 dark:text-orange-400'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {activeTab === 'vehicles' && (
+                  <motion.div
+                    layoutId="activeTabBadge"
+                    className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-slate-900"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                  />
+                )}
+                <Car size={16} className="relative z-10" />
+                <span className="relative z-10">خودروها</span>
+                <span className="relative z-10 rounded-lg bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-950/60 dark:text-orange-300">
+                  {faNumber(vehicles.length)}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-600/20 transition-all hover:bg-orange-700 hover:shadow-orange-600/40 active:scale-95"
-            >
-              <Plus size={18} />
-              ثبت خودرو جدید
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('drivers')}
+                className={`relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
+                  activeTab === 'drivers'
+                    ? 'text-orange-700 dark:text-orange-400'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {activeTab === 'drivers' && (
+                  <motion.div
+                    layoutId="activeTabBadge"
+                    className="absolute inset-0 rounded-xl bg-white shadow-sm dark:bg-slate-900"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                  />
+                )}
+                <User size={16} className="relative z-10" />
+                <span className="relative z-10">رانندگان</span>
+                <span className="relative z-10 rounded-lg bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-950/60 dark:text-orange-300">
+                  {faNumber(drivers.length)}
+                </span>
+              </button>
+            </div>
+
+            {/* دکمه‌های عملیات اصلی هماهنگ با تب انتخابی */}
+            {activeTab === 'vehicles' ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleRefreshVehicles()}
+                  disabled={isRefreshingVehicles}
+                  aria-label="به‌روزرسانی خودروها"
+                  title="به‌روزرسانی"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <RefreshCw
+                    size={17}
+                    className={isRefreshingVehicles ? 'animate-spin' : ''}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenCreateVehicle}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-600/20 transition-all hover:bg-orange-700 hover:shadow-orange-600/40 active:scale-95"
+                >
+                  <Plus size={18} />
+                  ثبت خودرو جدید
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void loadDrivers(true)}
+                  disabled={isRefreshingDrivers}
+                  aria-label="به‌روزرسانی رانندگان"
+                  title="به‌روزرسانی"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <RefreshCw
+                    size={17}
+                    className={isRefreshingDrivers ? 'animate-spin' : ''}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenCreateDriver}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-600/20 transition-all hover:bg-orange-700 hover:shadow-orange-600/40 active:scale-95"
+                >
+                  <UserPlus size={18} />
+                  ثبت راننده جدید
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
+        {/* خطاهای عملیاتی */}
         <AnimatePresence initial={false}>
-          {operationError && (
+          {(activeTab === 'vehicles' ? vehicleError : driverError) && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -371,13 +599,18 @@ export default function VehiclesPageClient() {
             >
               <div className="flex min-w-0 items-start gap-3">
                 <AlertCircle className="mt-0.5 shrink-0" size={18} />
-
-                <p className="text-sm leading-6">{operationError}</p>
+                <p className="text-sm leading-6">
+                  {activeTab === 'vehicles' ? vehicleError : driverError}
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setOperationError(null)}
+                onClick={() =>
+                  activeTab === 'vehicles'
+                    ? setVehicleError(null)
+                    : setDriverError(null)
+                }
                 aria-label="بستن پیام خطا"
                 title="بستن"
                 className="shrink-0 rounded-lg p-1 transition-colors hover:bg-red-100 dark:hover:bg-red-900/40"
@@ -388,153 +621,298 @@ export default function VehiclesPageClient() {
           )}
         </AnimatePresence>
 
-        <VehicleStats {...stats} />
+        {/* ================= تب ۱: خودروها ================= */}
+        {activeTab === 'vehicles' && (
+          <motion.div
+            key="tab-vehicles"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-6"
+          >
+            <VehicleStats {...vehicleStatsData} />
 
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-        >
-          <div className="flex flex-col gap-4 border-b border-slate-100 p-6 dark:border-slate-800/50 md:flex-row md:items-center md:justify-between">
-            <div className="relative w-full max-w-md">
-              <Search
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
+            <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 dark:border-slate-800/50 md:flex-row md:items-center md:justify-between">
+                <div className="relative w-full max-w-md">
+                  <Search
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
 
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="جست‌وجو بر اساس پلاک، مدل یا راننده..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-orange-500/50 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              />
-            </div>
+                  <input
+                    type="search"
+                    value={vehicleSearch}
+                    onChange={(event) => setVehicleSearch(event.target.value)}
+                    placeholder="جست‌وجو بر اساس پلاک، مدل یا نام راننده..."
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-orange-500/50 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Filter
-                  size={14}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Filter
+                      size={14}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
 
-                <select
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as VehicleStatusFilter)
-                  }
-                  className="appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-9 text-xs font-semibold text-slate-600 outline-none transition-colors focus:border-orange-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                >
-                  <option value="all">همه وضعیت‌ها</option>
-                  <option value="active">فعال</option>
-                  <option value="inactive">غیرفعال</option>
-                </select>
+                    <select
+                      value={statusFilter}
+                      onChange={(event) =>
+                        setStatusFilter(
+                          event.target.value as VehicleStatusFilter,
+                        )
+                      }
+                      className="appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-9 text-xs font-semibold text-slate-600 outline-none transition-colors focus:border-orange-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                    >
+                      <option value="all">همه وضعیت‌ها</option>
+                      <option value="active">فعال</option>
+                      <option value="inactive">غیرفعال</option>
+                    </select>
+                  </div>
+
+                  <select
+                    value={typeFilter}
+                    onChange={(event) =>
+                      setTypeFilter(event.target.value as VehicleTypeFilter)
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 outline-none transition-colors focus:border-orange-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                  >
+                    <option value="all">همه انواع خودرو</option>
+                    <option value="0">سواری</option>
+                    <option value="1">وانت و نیسان</option>
+                    <option value="2">کامیون و تریلی</option>
+                    <option value="3">موتورسیکلت</option>
+                  </select>
+
+                  {hasActiveVehicleFilters && (
+                    <button
+                      type="button"
+                      onClick={clearVehicleFilters}
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400"
+                    >
+                      <X size={14} />
+                      پاک‌کردن فیلترها
+                    </button>
+                  )}
+
+                  <div className="hidden h-6 w-px bg-slate-200 dark:bg-slate-800 md:block" />
+
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    تعداد: {faNumber(filteredVehicles.length)} خودرو
+                  </span>
+                </div>
               </div>
 
-              <select
-                value={typeFilter}
-                onChange={(event) =>
-                  setTypeFilter(event.target.value as VehicleTypeFilter)
-                }
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 outline-none transition-colors focus:border-orange-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-              >
-                <option value="all">همه انواع خودرو</option>
-                <option value="0">سواری</option>
-                <option value="1">وانت و نیسان</option>
-                <option value="2">کامیون و تریلی</option>
-                <option value="3">موتورسیکلت</option>
-              </select>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-right">
+                  <thead>
+                    <tr className="bg-slate-50/50 text-xs font-bold text-slate-500 dark:bg-slate-800/30 dark:text-slate-400">
+                      <th className="px-6 py-5">اطلاعات خودرو</th>
+                      <th className="px-6 py-5">نوع خودرو</th>
+                      <th className="px-6 py-5">سرعت و موقعیت</th>
+                      <th className="px-6 py-5">وضعیت</th>
+                      <th className="px-6 py-5 text-center">عملیات</th>
+                    </tr>
+                  </thead>
 
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400"
-                >
-                  <X size={14} />
-                  پاک‌کردن فیلترها
-                </button>
-              )}
-
-              <div className="hidden h-6 w-px bg-slate-200 dark:bg-slate-800 md:block" />
-
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                تعداد: {faNumber(filteredVehicles.length)} خودرو
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-right">
-              <thead>
-                <tr className="bg-slate-50/50 text-xs font-bold text-slate-500 dark:bg-slate-800/30 dark:text-slate-400">
-                  <th className="px-6 py-5">اطلاعات خودرو</th>
-                  <th className="px-6 py-5">نوع خودرو</th>
-                  <th className="px-6 py-5">سرعت و موقعیت</th>
-                  <th className="px-6 py-5">وضعیت</th>
-                  <th className="px-6 py-5 text-center">عملیات</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {state === 'loading' ? (
-                  <LoadingState />
-                ) : state === 'error' ? (
-                  <ErrorState onRetry={handleRetry} />
-                ) : filteredVehicles.length === 0 ? (
-                  <EmptyState hasFilter={hasActiveFilters} />
-                ) : (
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredVehicles.map((vehicle) => (
-                      <VehicleTableRow
-                        key={vehicle.id}
-                        vehicle={vehicle}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleRequestDelete}
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                    {vehiclesState === 'loading' ? (
+                      <LoadingState text="در حال دریافت لیست خودروها..." />
+                    ) : vehiclesState === 'error' ? (
+                      <ErrorState
+                        onRetry={() => void handleRefreshVehicles()}
                       />
-                    ))}
-                  </AnimatePresence>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </motion.section>
+                    ) : filteredVehicles.length === 0 ? (
+                      <EmptyState
+                        hasFilter={hasActiveVehicleFilters}
+                        emptyText="هنوز خودرویی در سیستم ثبت نشده است"
+                        filterText="هیچ خودرویی با این مشخصات یافت نشد"
+                      />
+                    ) : (
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {filteredVehicles.map((vehicle) => (
+                          <VehicleTableRow
+                            key={vehicle.id}
+                            vehicle={vehicle}
+                            onEdit={handleOpenEditVehicle}
+                            onDelete={(v) => {
+                              setVehicleError(null);
+                              setVehiclePendingDelete(v);
+                            }}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {/* ================= تب ۲: رانندگان ================= */}
+        {activeTab === 'drivers' && (
+          <motion.div
+            key="tab-drivers"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-6"
+          >
+            <DriverStats {...driverStatsData} />
+
+            <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-col gap-4 border-b border-slate-100 p-6 dark:border-slate-800/50 md:flex-row md:items-center md:justify-between">
+                <div className="relative w-full max-w-md">
+                  <Search
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
+
+                  <input
+                    type="search"
+                    value={driverSearch}
+                    onChange={(event) => setDriverSearch(event.target.value)}
+                    placeholder="جستجو بر اساس نام، کد ملی یا تلفن..."
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-orange-500/50 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    <Filter size={14} />
+                    فیلتر پیشرفته
+                  </button>
+
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    تعداد: {faNumber(filteredDrivers.length)} نفر
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-right">
+                  <thead>
+                    <tr className="bg-slate-50/50 text-xs font-bold text-slate-500 dark:bg-slate-800/30 dark:text-slate-400">
+                      <th className="px-6 py-5">اطلاعات فردی</th>
+                      <th className="px-6 py-5">کد ملی</th>
+                      <th className="px-6 py-5">اطلاعات تماس</th>
+                      <th className="px-6 py-5">وضعیت گواهینامه</th>
+                      <th className="px-6 py-5 text-center">عملیات</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                    {driversState === 'loading' ? (
+                      <LoadingState text="در حال دریافت لیست رانندگان..." />
+                    ) : driversState === 'error' ? (
+                      <ErrorState onRetry={() => void loadDrivers()} />
+                    ) : filteredDrivers.length === 0 ? (
+                      <EmptyState
+                        hasFilter={driverSearch.trim().length > 0}
+                        emptyText="هنوز راننده‌ای در سیستم ثبت نشده است"
+                        filterText="هیچ راننده‌ای با این مشخصات یافت نشد"
+                      />
+                    ) : (
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {filteredDrivers.map((driver) => (
+                          <DriverTableRow
+                            key={driver.id}
+                            driver={driver}
+                            onEdit={handleOpenEditDriver}
+                            onDelete={(d) => {
+                              setDriverError(null);
+                              setDriverPendingDelete(d);
+                            }}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </motion.div>
+        )}
       </div>
 
+      {/* مودال خودرو */}
       <VehicleFormModal
-        isOpen={isFormModalOpen}
+        isOpen={isVehicleModalOpen}
         initialData={selectedVehicle}
-        isSubmitting={isSubmitting}
-        onClose={handleCloseFormModal}
-        onSubmit={handleSubmit}
+        isSubmitting={isSubmittingVehicle}
+        onClose={handleCloseVehicleModal}
+        onSubmit={handleVehicleSubmit}
       />
 
-      <DeleteConfirmationModal
-        vehicle={vehiclePendingDelete}
-        isDeleting={isDeleting}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
+      {/* مودال راننده */}
+      <DriverFormModal
+        isOpen={isDriverModalOpen}
+        initialData={selectedDriver}
+        isSubmitting={isSubmittingDriver}
+        onClose={handleCloseDriverModal}
+        onSubmit={handleDriverSubmit}
       />
+
+      {/* مودال تایید حذف خودرو */}
+      <ConfirmDeleteModal
+        isOpen={Boolean(vehiclePendingDelete)}
+        title="حذف خودرو"
+        isDeleting={isDeletingVehicle}
+        onCancel={() => {
+          if (!isDeletingVehicle) setVehiclePendingDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteVehicle}
+      >
+        آیا از حذف خودرو با پلاک{' '}
+        <strong dir="ltr" className="mx-1 text-slate-900 dark:text-white">
+          {vehiclePendingDelete?.plateNumber}
+        </strong>{' '}
+        اطمینان دارید؟
+      </ConfirmDeleteModal>
+
+      {/* مودال تایید حذف راننده */}
+      <ConfirmDeleteModal
+        isOpen={Boolean(driverPendingDelete)}
+        title="حذف راننده"
+        isDeleting={isDeletingDriver}
+        onCancel={() => {
+          if (!isDeletingDriver) setDriverPendingDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteDriver}
+      >
+        آیا از حذف راننده{' '}
+        <strong className="mx-1 text-slate-900 dark:text-white">
+          {driverPendingDelete?.firstName} {driverPendingDelete?.lastName}
+        </strong>{' '}
+        اطمینان دارید؟
+      </ConfirmDeleteModal>
     </>
   );
 }
 
-function LoadingState() {
+// ================= کامپوننت‌های کمکی مشترک =================
+
+function LoadingState({ text }: { text: string }) {
   return (
     <tr>
       <td colSpan={5} className="py-24">
         <div className="flex flex-col items-center gap-4">
           <div className="relative h-12 w-12">
             <div className="h-12 w-12 rounded-full border-4 border-slate-100 dark:border-slate-800" />
-
             <Loader2
               className="absolute inset-0 animate-spin text-orange-500"
               size={48}
             />
           </div>
-
           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            در حال دریافت لیست خودروها...
+            {text}
           </span>
         </div>
       </td>
@@ -542,7 +920,15 @@ function LoadingState() {
   );
 }
 
-function EmptyState({ hasFilter }: { hasFilter: boolean }) {
+function EmptyState({
+  hasFilter,
+  emptyText,
+  filterText,
+}: {
+  hasFilter: boolean;
+  emptyText: string;
+  filterText: string;
+}) {
   return (
     <tr>
       <td colSpan={5} className="py-24">
@@ -554,11 +940,8 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
               <Inbox size={48} className="opacity-30" />
             )}
           </div>
-
           <span className="text-sm font-medium">
-            {hasFilter
-              ? 'هیچ خودرویی با این مشخصات یافت نشد'
-              : 'هنوز خودرویی در سیستم ثبت نشده است'}
+            {hasFilter ? filterText : emptyText}
           </span>
         </div>
       </td>
@@ -574,14 +957,12 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           <div className="rounded-full bg-red-50 p-5 text-red-500 dark:bg-red-950/30 dark:text-red-400">
             <AlertCircle size={36} />
           </div>
-
           <p className="text-sm text-red-500 dark:text-red-400">
             خطایی در برقراری ارتباط با سرور رخ داد
           </p>
-
           <button
             type="button"
-            onClick={() => void onRetry()}
+            onClick={onRetry}
             className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
           >
             تلاش دوباره
@@ -592,27 +973,31 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-type DeleteConfirmationModalProps = {
-  vehicle: Vehicle | null;
+interface ConfirmDeleteModalProps {
+  isOpen: boolean;
+  title: string;
+  children: ReactNode;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
-};
+}
 
-function DeleteConfirmationModal({
-  vehicle,
+function ConfirmDeleteModal({
+  isOpen,
+  title,
+  children,
   isDeleting,
   onCancel,
   onConfirm,
-}: DeleteConfirmationModalProps) {
+}: ConfirmDeleteModalProps) {
   return (
     <AnimatePresence>
-      {vehicle && (
+      {isOpen && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+          dir="rtl"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 font-vazir"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-vehicle-title"
         >
           <motion.button
             type="button"
@@ -637,15 +1022,10 @@ function DeleteConfirmationModal({
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
                   <Trash2 size={21} />
                 </div>
-
                 <div>
-                  <h2
-                    id="delete-vehicle-title"
-                    className="text-base font-black text-slate-900 dark:text-white"
-                  >
-                    حذف خودرو
+                  <h2 className="text-base font-black text-slate-900 dark:text-white">
+                    {title}
                   </h2>
-
                   <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
                     این عملیات قابل بازگشت نیست.
                   </p>
@@ -666,14 +1046,7 @@ function DeleteConfirmationModal({
 
             <div className="p-5">
               <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-                آیا از حذف خودرو با پلاک
-                <strong
-                  dir="ltr"
-                  className="mx-1 text-slate-900 dark:text-white"
-                >
-                  {vehicle.plateNumber}
-                </strong>
-                اطمینان دارید؟
+                {children}
               </p>
             </div>
 
@@ -698,8 +1071,7 @@ function DeleteConfirmationModal({
                 ) : (
                   <Trash2 size={18} />
                 )}
-
-                {isDeleting ? 'در حال حذف...' : 'حذف خودرو'}
+                {isDeleting ? 'در حال حذف...' : 'تایید و حذف'}
               </button>
             </div>
           </motion.div>

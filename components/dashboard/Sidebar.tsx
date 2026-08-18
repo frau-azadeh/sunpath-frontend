@@ -8,10 +8,10 @@ import { usePathname } from 'next/navigation';
 import {
   Bell,
   Car,
+  CarFront,
   LayoutDashboard,
   Map,
   Settings,
-  Users,
   X,
 } from 'lucide-react';
 
@@ -27,14 +27,9 @@ const navigationItems = [
     icon: <Map size={22} strokeWidth={1.5} />,
   },
   {
-    href: '/drivers',
-    label: 'رانندگان',
-    icon: <Users size={22} strokeWidth={1.5} />,
-  },
-  {
     href: '/vehicles',
-    label: 'خودروها',
-    icon: <Car size={22} strokeWidth={1.5} />,
+    label: 'مدیریت ناوگان',
+    icon: <CarFront size={22} strokeWidth={1.5} />,
   },
   {
     href: '/alerts',
