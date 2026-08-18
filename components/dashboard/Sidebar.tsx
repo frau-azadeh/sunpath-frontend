@@ -11,11 +11,12 @@ import {
   LayoutDashboard,
   Map,
   Settings,
-  Users,
+  CarFront,
+
   X,
 } from 'lucide-react';
 
-const navigationItems = [
+ const navigationItems = [
   {
     href: '/',
     label: 'داشبورد',
@@ -27,14 +28,9 @@ const navigationItems = [
     icon: <Map size={22} strokeWidth={1.5} />,
   },
   {
-    href: '/drivers',
-    label: 'رانندگان',
-    icon: <Users size={22} strokeWidth={1.5} />,
-  },
-  {
     href: '/vehicles',
-    label: 'خودروها',
-    icon: <Car size={22} strokeWidth={1.5} />,
+    label: 'مدیریت ناوگان',
+    icon: <CarFront size={22} strokeWidth={1.5} />,
   },
   {
     href: '/alerts',
@@ -47,6 +43,7 @@ const navigationItems = [
     icon: <Settings size={22} strokeWidth={1.5} />,
   },
 ];
+
 
 interface SidebarProps {
   onNavigate?: () => void;
