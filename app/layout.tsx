@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
-        <Script src="/config/config.js" />
+        <Script src="/config/config.js" strategy="beforeInteractive" />
       </head>
       <body className="font-vazir antialiased">
         <Providers>{children}</Providers>
