@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 
-/* این خط به Tailwind می‌گوید کلاس .dark را به عنوان دارک‌مود بشناسد */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -26,7 +25,11 @@
 @layer base {
   html {
     font-family: 'Vazirmatn', system-ui, sans-serif;
-    color-scheme: light dark;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {

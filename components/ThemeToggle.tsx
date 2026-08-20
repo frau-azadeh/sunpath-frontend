@@ -25,7 +25,7 @@ export const ThemeToggle = () => {
     <button
       type="button"
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-      className="flex h-10 w-10 items-center justify-center rounded-xl border border-border transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-border transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
       aria-label="Toggle theme"
     >
       {resolvedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}

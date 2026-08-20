@@ -167,7 +167,7 @@ export function VehicleTableRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+      className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40"
     >
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
@@ -180,12 +180,12 @@ export function VehicleTableRow({
           <div className="min-w-0">
             <p
               dir="ltr"
-              className="truncate text-sm font-black text-slate-900 dark:text-white"
+              className="truncate text-sm font-black text-neutral-900 dark:text-white"
             >
               {plateNumber}
             </p>
 
-            <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
               {model || 'مدل ثبت نشده'}
             </p>
           </div>
@@ -193,23 +193,23 @@ export function VehicleTableRow({
       </td>
 
       <td className="hidden px-5 py-4 lg:table-cell">
-        <span className="inline-flex rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <span className="inline-flex rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
           {vehicleType.label}
         </span>
       </td>
 
       <td className="hidden px-5 py-4 xl:table-cell">
-        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
           <Activity size={16} className="text-blue-500" />
           <span>{faNumber(Math.round(speed))} کیلومتر</span>
         </div>
       </td>
 
       <td className="hidden px-5 py-4 2xl:table-cell">
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
           <MapPin
             size={16}
-            className={hasLocation ? 'text-emerald-500' : 'text-slate-400'}
+            className={hasLocation ? 'text-emerald-500' : 'text-neutral-400'}
           />
           <span>
             {hasLocation ? formatDateTime(loose.lastUpdateAt) : 'بدون موقعیت'}
@@ -222,12 +222,12 @@ export function VehicleTableRow({
           className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold ${
             isActive
               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+              : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
           }`}
         >
           <span
             className={`h-2 w-2 rounded-full ${
-              isActive ? 'bg-emerald-500' : 'bg-slate-400'
+              isActive ? 'bg-emerald-500' : 'bg-neutral-400'
             }`}
           />
           {isActive ? 'فعال' : 'غیرفعال'}
@@ -241,7 +241,7 @@ export function VehicleTableRow({
             onClick={() => onEdit(vehicle)}
             aria-label={`ویرایش ${plateNumber}`}
             title="ویرایش خودرو"
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+            className="rounded-lg p-2 text-neutral-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
           >
             <Edit3 size={18} />
           </button>
@@ -251,7 +251,7 @@ export function VehicleTableRow({
             onClick={() => onDelete(vehicle)}
             aria-label={`حذف ${plateNumber}`}
             title="حذف خودرو"
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            className="rounded-lg p-2 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
           >
             <Trash2 size={18} />
           </button>

@@ -136,7 +136,7 @@ export default function LiveMap() {
     : null;
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+    <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="relative h-full w-full">
         <MapContainer
           center={TEHRAN_CENTER}
@@ -166,7 +166,7 @@ export default function LiveMap() {
           ))}
         </MapContainer>
 
-        <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2 rounded-xl bg-white/90 p-3 shadow-sm backdrop-blur dark:bg-slate-900/90">
+        <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2 rounded-xl bg-white/90 p-3 shadow-sm backdrop-blur dark:bg-neutral-900/90">
           <div className="flex gap-1">
             {(['all', 'moving', 'stopped'] as const).map((item) => (
               <button
@@ -175,8 +175,8 @@ export default function LiveMap() {
                 onClick={() => setFilter(item)}
                 className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
                   filter === item
-                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
+                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
                 }`}
               >
                 {item === 'all' ? 'همه' : item === 'moving' ? 'متحرک' : 'متوقف'}
@@ -202,8 +202,8 @@ export default function LiveMap() {
       </div>
 
       {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-72 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
-          <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
+        <div className="absolute bottom-4 left-4 z-[1000] w-72 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/95">
+          <div className="mb-2 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
             <h3 className="flex items-center gap-2 text-sm font-bold">
               <Navigation className="h-3 w-3 text-orange-500" />
               خودرو {selectedVehicle.id}
@@ -212,7 +212,7 @@ export default function LiveMap() {
             <button
               type="button"
               onClick={() => setSelectedVehicleId(null)}
-              className="text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+              className="text-neutral-400 transition-colors hover:text-neutral-600 dark:hover:text-neutral-200"
               aria-label="بستن"
             >
               <X size={14} />
@@ -220,12 +220,12 @@ export default function LiveMap() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
               <Gauge size={12} className="text-orange-500" />
               {Number(selectedVehicle.speed ?? 0)} km/h
             </div>
 
-            <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
               <Compass size={12} className="text-orange-500" />
               {Number(selectedVehicle.heading ?? 0)}°
             </div>

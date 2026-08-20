@@ -48,10 +48,10 @@ const getDefaultValues = (initialData?: Driver | null): DriverFormInput => ({
 
 const inputClassName = `
   w-full rounded-2xl border bg-orange-50/30 px-4 py-3
-  text-sm text-slate-900 outline-none transition-all
-  placeholder:text-slate-400
+  text-sm text-neutral-900 outline-none transition-all
+  placeholder:text-neutral-400
   disabled:cursor-not-allowed disabled:opacity-60
-  dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-600
+  dark:bg-neutral-950 dark:text-white dark:placeholder:text-neutral-600
 `;
 
 const normalInputClassName = `
@@ -61,10 +61,10 @@ const normalInputClassName = `
   focus:bg-white
   focus:ring-4
   focus:ring-orange-500/10
-  dark:border-slate-800
+  dark:border-neutral-800
   dark:hover:border-orange-800
   dark:focus:border-orange-500
-  dark:focus:bg-slate-950
+  dark:focus:bg-neutral-950
 `;
 
 const errorInputClassName = `
@@ -140,7 +140,7 @@ export const DriverFormModal = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="absolute inset-0 cursor-default bg-slate-950/50 backdrop-blur-sm"
+            className="absolute inset-0 cursor-default bg-neutral-950/50 backdrop-blur-sm"
           />
 
           {/* Modal */}
@@ -171,7 +171,7 @@ export const DriverFormModal = ({
               relative w-full max-w-lg overflow-hidden
               rounded-[32px] border border-orange-100
               bg-white shadow-2xl shadow-orange-950/10
-              dark:border-orange-950/60 dark:bg-slate-900
+              dark:border-orange-950/60 dark:bg-neutral-900
             "
           >
             {/* Orange accent */}
@@ -183,7 +183,7 @@ export const DriverFormModal = ({
                 flex items-center justify-between
                 border-b border-orange-100
                 bg-orange-50/40 p-6
-                dark:border-slate-800 dark:bg-orange-950/10
+                dark:border-neutral-800 dark:bg-orange-950/10
               "
             >
               <div className="flex min-w-0 items-center gap-3">
@@ -200,12 +200,12 @@ export const DriverFormModal = ({
                 <div className="min-w-0">
                   <h2
                     id="driver-form-title"
-                    className="truncate text-xl font-black text-slate-900 dark:text-white"
+                    className="truncate text-xl font-black text-neutral-900 dark:text-white"
                   >
                     {initialData ? 'ویرایش اطلاعات راننده' : 'ثبت راننده جدید'}
                   </h2>
 
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     اطلاعات راننده را با دقت تکمیل کنید
                   </p>
                 </div>
@@ -218,7 +218,7 @@ export const DriverFormModal = ({
                 aria-label="بستن"
                 className="
                   flex size-9 shrink-0 items-center justify-center
-                  rounded-xl text-slate-400 transition-colors
+                  rounded-xl text-neutral-400 transition-colors
                   hover:bg-orange-100 hover:text-orange-600
                   disabled:cursor-not-allowed disabled:opacity-50
                   dark:hover:bg-orange-950/40 dark:hover:text-orange-400
@@ -372,7 +372,7 @@ export const DriverFormModal = ({
                   flex flex-col-reverse gap-3
                   border-t border-orange-100 pt-5
                   sm:flex-row
-                  dark:border-slate-800
+                  dark:border-neutral-800
                 "
               >
                 <button
@@ -380,14 +380,14 @@ export const DriverFormModal = ({
                   disabled={isSubmitting}
                   onClick={handleClose}
                   className="
-                    flex-1 rounded-2xl border border-slate-200
-                    bg-white py-3.5 font-bold text-slate-600
+                    flex-1 rounded-2xl border border-neutral-200
+                    bg-white py-3.5 font-bold text-neutral-600
                     transition-colors
                     hover:border-orange-200 hover:bg-orange-50
                     hover:text-orange-700
                     disabled:cursor-not-allowed disabled:opacity-50
-                    dark:border-slate-700 dark:bg-slate-900
-                    dark:text-slate-400 dark:hover:border-orange-900
+                    dark:border-neutral-700 dark:bg-neutral-900
+                    dark:text-neutral-400 dark:hover:border-orange-900
                     dark:hover:bg-orange-950/20 dark:hover:text-orange-400
                   "
                 >
@@ -444,8 +444,8 @@ const FormField = ({ id, label, error, icon, children }: FormFieldProps) => (
       htmlFor={id}
       className="
         flex items-center gap-1.5
-        text-sm font-bold text-slate-700
-        dark:text-slate-300
+        text-sm font-bold text-neutral-700
+        dark:text-neutral-300
       "
     >
       {icon && (

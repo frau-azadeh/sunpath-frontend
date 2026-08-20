@@ -80,10 +80,10 @@ const getPersianDateValue = (date: string | null | undefined) => {
 };
 
 const inputBaseClassName =
-  'w-full rounded-xl border bg-orange-50/30 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-950 dark:text-white';
+  'w-full rounded-xl border bg-orange-50/30 px-4 py-3 text-sm font-medium text-neutral-800 outline-none transition-all placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-950 dark:text-white';
 
 const normalInputClassName =
-  'border-orange-100 hover:border-orange-300 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-700 dark:hover:border-orange-900 dark:focus:border-orange-500 dark:focus:bg-slate-950';
+  'border-orange-100 hover:border-orange-300 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-neutral-700 dark:hover:border-orange-900 dark:focus:border-orange-500 dark:focus:bg-neutral-950';
 
 const errorInputClassName =
   'border-red-500 bg-red-50/40 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 dark:border-red-500 dark:bg-red-950/10';
@@ -156,7 +156,7 @@ export function VehicleFormModal({
           <motion.button
             type="button"
             aria-label="بستن مودال"
-            className="absolute inset-0 cursor-default bg-slate-950/50 backdrop-blur-sm"
+            className="absolute inset-0 cursor-default bg-neutral-950/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -171,11 +171,11 @@ export function VehicleFormModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 16 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-orange-100 bg-white shadow-2xl shadow-orange-950/10 dark:border-orange-950/60 dark:bg-slate-900"
+            className="relative z-10 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-orange-100 bg-white shadow-2xl shadow-orange-950/10 dark:border-orange-950/60 dark:bg-neutral-900"
           >
             <div className="h-1.5 bg-orange-500" />
 
-            <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/40 p-5 dark:border-slate-800 dark:bg-orange-950/10 sm:p-6">
+            <div className="flex items-center justify-between border-b border-orange-100 bg-orange-50/40 p-5 dark:border-neutral-800 dark:bg-orange-950/10 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
                   <Car size={22} />
@@ -184,12 +184,12 @@ export function VehicleFormModal({
                 <div>
                   <h2
                     id="vehicle-form-title"
-                    className="text-lg font-black text-slate-900 dark:text-white"
+                    className="text-lg font-black text-neutral-900 dark:text-white"
                   >
                     {initialData ? 'ویرایش خودرو' : 'ثبت خودرو جدید'}
                   </h2>
 
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     اطلاعات وسیله نقلیه را وارد کنید.
                   </p>
                 </div>
@@ -200,7 +200,7 @@ export function VehicleFormModal({
                 onClick={handleClose}
                 disabled={isSubmitting}
                 aria-label="بستن"
-                className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-orange-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
+                className="rounded-xl p-2 text-neutral-400 transition-colors hover:bg-orange-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
               >
                 <X size={21} />
               </button>
@@ -257,7 +257,7 @@ export function VehicleFormModal({
                 name="vehicleType"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    <p className="text-sm font-bold text-neutral-700 dark:text-neutral-200">
                       نوع وسیله نقلیه
                     </p>
 
@@ -281,7 +281,7 @@ export function VehicleFormModal({
                             className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                               isSelected
                                 ? 'border-orange-500 bg-orange-50 text-orange-700 ring-4 ring-orange-500/10 dark:bg-orange-500/10 dark:text-orange-400'
-                                : 'border-slate-200 bg-white text-slate-500 hover:border-orange-300 hover:bg-orange-50/50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-orange-900'
+                                : 'border-neutral-200 bg-white text-neutral-500 hover:border-orange-300 hover:bg-orange-50/50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-400 dark:hover:border-orange-900'
                             }`}
                           >
                             <Icon size={21} />
@@ -377,8 +377,8 @@ export function VehicleFormModal({
                               <span
                                 className={
                                   value
-                                    ? 'text-slate-800 dark:text-white'
-                                    : 'text-slate-400'
+                                    ? 'text-neutral-800 dark:text-white'
+                                    : 'text-neutral-400'
                                 }
                               >
                                 {value || 'انتخاب تاریخ شمسی'}
@@ -403,7 +403,7 @@ export function VehicleFormModal({
                 name="status"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    <p className="text-sm font-bold text-neutral-700 dark:text-neutral-200">
                       وضعیت خودرو
                     </p>
 
@@ -425,19 +425,19 @@ export function VehicleFormModal({
                         icon={<X size={18} />}
                         isSelected={field.value === 0}
                         onClick={() => field.onChange(0 as VehicleStatus)}
-                        activeClassName="border-slate-500 bg-slate-100 text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-200"
+                        activeClassName="border-neutral-500 bg-neutral-100 text-neutral-700 dark:border-neutral-500 dark:bg-neutral-800 dark:text-neutral-200"
                       />
                     </div>
                   </div>
                 )}
               />
 
-              <div className="flex flex-col-reverse gap-3 border-t border-orange-100 pt-5 dark:border-slate-800 sm:flex-row">
+              <div className="flex flex-col-reverse gap-3 border-t border-orange-100 pt-5 dark:border-neutral-800 sm:flex-row">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3.5 text-sm font-bold text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-orange-900 dark:hover:bg-orange-950/20"
+                  className="flex-1 rounded-xl border border-neutral-200 px-4 py-3.5 text-sm font-bold text-neutral-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-orange-900 dark:hover:bg-orange-950/20"
                 >
                   انصراف
                 </button>
@@ -473,7 +473,7 @@ function FormField({ id, label, error, children }: FormFieldProps) {
     <div className="space-y-2">
       <label
         htmlFor={id}
-        className="text-sm font-bold text-slate-700 dark:text-slate-200"
+        className="text-sm font-bold text-neutral-700 dark:text-neutral-200"
       >
         {label}
       </label>
@@ -509,7 +509,7 @@ function StatusButton({
       className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors ${
         isSelected
           ? activeClassName
-          : 'border-slate-200 text-slate-500 hover:border-orange-200 hover:bg-orange-50/50 dark:border-slate-700 dark:text-slate-400 dark:hover:border-orange-900 dark:hover:bg-orange-950/20'
+          : 'border-neutral-200 text-neutral-500 hover:border-orange-200 hover:bg-orange-50/50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-orange-900 dark:hover:bg-orange-950/20'
       }`}
     >
       {icon}

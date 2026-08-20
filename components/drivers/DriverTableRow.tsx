@@ -26,7 +26,7 @@ export function DriverTableRow({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+      className="transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50"
     >
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-3">
@@ -34,13 +34,13 @@ export function DriverTableRow({
             {initial}
           </div>
 
-          <span className="font-semibold text-slate-900 dark:text-slate-100">
+          <span className="font-semibold text-neutral-900 dark:text-neutral-100">
             {fullName}
           </span>
         </div>
       </td>
 
-      <td className="whitespace-nowrap px-6 py-4 text-slate-600 dark:text-slate-400">
+      <td className="whitespace-nowrap px-6 py-4 text-neutral-600 dark:text-neutral-400">
         <div className="flex items-center gap-2">
           <CreditCard size={15} />
 
@@ -48,7 +48,7 @@ export function DriverTableRow({
         </div>
       </td>
 
-      <td className="whitespace-nowrap px-6 py-4 text-slate-600 dark:text-slate-400">
+      <td className="whitespace-nowrap px-6 py-4 text-neutral-600 dark:text-neutral-400">
         <div className="flex items-center gap-2">
           <Phone size={15} />
 
@@ -69,7 +69,7 @@ export function DriverTableRow({
             onClick={() => onEdit(driver)}
             aria-label={`ویرایش ${fullName}`}
             title="ویرایش"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-orange-50 hover:text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500/30 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-orange-50 hover:text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500/30 dark:hover:bg-orange-950/30 dark:hover:text-orange-400"
           >
             <Pencil size={18} />
           </button>
@@ -79,7 +79,7 @@ export function DriverTableRow({
             onClick={() => onDelete(driver)}
             aria-label={`حذف ${fullName}`}
             title="حذف"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 dark:hover:bg-red-950/30 dark:hover:text-red-400"
           >
             <Trash2 size={18} />
           </button>

@@ -49,7 +49,7 @@ export const DriverStats = ({ total, licensed, active }: DriverStatsProps) => {
       {stats.map(({ label, value, icon: Icon, boxClass }) => (
         <div
           key={label}
-          className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl  p-5 "
+          className="rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl  p-5 "
         >
           <div className="flex items-center gap-4">
             <div className={`rounded-2xl p-3 ${boxClass}`}>
