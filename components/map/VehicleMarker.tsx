@@ -39,7 +39,7 @@ export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
                 ? 'z-[1002] scale-125 border-white bg-orange-500 text-white'
                 : isMoving
                   ? 'border-white bg-emerald-500 text-white'
-                  : 'border-white bg-slate-500 text-white'
+                  : 'border-white bg-neutral-500 text-white'
             }">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="transform -rotate-45">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
