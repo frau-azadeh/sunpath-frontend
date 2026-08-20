@@ -71,7 +71,7 @@ export function VehicleStats({
         return (
           <div
             key={stat.label}
-            className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
           >
             <div className="flex items-center gap-3">
               <div
@@ -81,13 +81,13 @@ export function VehicleStats({
               </div>
 
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
                   {stat.label}
                 </p>
 
-                <p className="mt-1 text-xl font-black text-slate-900 dark:text-white">
+                <p className="mt-1 text-xl font-black text-neutral-900 dark:text-white">
                   {faNumber(stat.value)}
-                  <span className="mr-1 text-xs font-medium text-slate-400">
+                  <span className="mr-1 text-xs font-medium text-neutral-400">
                     دستگاه
                   </span>
                 </p>
