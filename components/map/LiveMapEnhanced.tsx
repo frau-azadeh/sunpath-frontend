@@ -218,7 +218,7 @@ export default function LiveMapEnhanced() {
     : null;
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+    <div className="relative flex h-full w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="relative h-full w-full">
         <MapContainer
           center={TEHRAN_CENTER}
@@ -251,7 +251,7 @@ export default function LiveMapEnhanced() {
         </MapContainer>
 
         <div className="absolute right-4 top-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-neutral-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
             <Layers size={14} className="mr-1 shrink-0 text-orange-500" />
 
             {(Object.keys(MAP_LAYERS) as MapMode[]).map((mode) => (
@@ -262,7 +262,7 @@ export default function LiveMapEnhanced() {
                 className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
                   mapMode === mode
                     ? 'bg-orange-500 text-white'
-                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
                 }`}
               >
                 {MAP_LAYERS[mode].name}
@@ -270,7 +270,7 @@ export default function LiveMapEnhanced() {
             ))}
           </div>
 
-          <div className="flex w-fit gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex w-fit gap-1 rounded-2xl border border-neutral-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
             {(['all', 'moving', 'stopped'] as const).map((filterOption) => (
               <button
                 key={filterOption}
@@ -278,8 +278,8 @@ export default function LiveMapEnhanced() {
                 onClick={() => setFilter(filterOption)}
                 className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
                   filter === filterOption
-                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
+                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
                 }`}
               >
                 {filterOption === 'all'
@@ -312,8 +312,8 @@ export default function LiveMapEnhanced() {
       </div>
 
       {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-72 max-w-[calc(100%-2rem)] rounded-[20px] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
-          <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
+        <div className="absolute bottom-4 left-4 z-[1000] w-72 max-w-[calc(100%-2rem)] rounded-[20px] border border-neutral-200 bg-white/95 p-4 shadow-sm backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/95">
+          <div className="mb-2 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
             <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold">
               <Navigation className="h-3 w-3 shrink-0 text-orange-500" />
               <span className="truncate">خودرو {selectedVehicle.id}</span>
@@ -322,7 +322,7 @@ export default function LiveMapEnhanced() {
             <button
               type="button"
               onClick={() => setSelectedVehicleId(null)}
-              className="shrink-0 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+              className="shrink-0 text-neutral-400 transition-colors hover:text-neutral-600 dark:hover:text-neutral-200"
               aria-label="بستن اطلاعات خودرو"
               title="بستن"
             >
@@ -331,12 +331,12 @@ export default function LiveMapEnhanced() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
               <Gauge size={12} className="text-orange-500" />
               {Number(selectedVehicle.speed) || 0} km/h
             </div>
 
-            <div className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
               <Compass size={12} className="text-orange-500" />
               {Number(selectedVehicle.heading) || 0}°
             </div>
