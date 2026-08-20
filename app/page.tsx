@@ -12,10 +12,8 @@ import {
   Map as MapIcon,
   Menu,
   Moon,
-  Settings,
   Sun,
   Truck,
-  X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -155,10 +153,31 @@ export default function SunPathDashboard() {
               initial={{ x: 320 }}
               animate={{ x: 0 }}
               exit={{ x: 320 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="fixed right-4 top-4 z-50 h-[calc(100vh-2rem)] w-72 rounded-3xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 lg:hidden"
+              transition={{
+                type: 'spring',
+                stiffness: 260,
+                damping: 28,
+              }}
+              className="
+    fixed
+    right-4
+    top-4
+    z-50
+    h-[calc(100vh-2rem)]
+    w-[280px]
+    overflow-hidden
+    rounded-3xl
+    border
+    border-neutral-200
+    bg-white
+    p-4
+    shadow-2xl
+    dark:border-neutral-800
+    dark:bg-neutral-900
+    lg:hidden
+  "
             >
-              <SidebarContent onClose={() => setMobileSidebarOpen(false)} />
+              <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
             </motion.aside>
           )}
         </AnimatePresence>
@@ -284,54 +303,6 @@ function DesktopSidebar() {
   );
 }
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
-  return (
-    <>
-      <div className="mb-8 flex items-center justify-between gap-3 px-2">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-neutral-200 p-2 dark:border-neutral-800">
-            <Truck className="text-orange-500" size={22} />
-          </div>
-
-          <div>
-            <h1 className="text-xl font-bold">SunPath</h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Fleet Tracking System
-            </p>
-          </div>
-        </div>
-
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-neutral-200 p-2 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300"
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-
-      <nav className="flex flex-col gap-2">
-        <SidebarItem
-          icon={<LayoutDashboard size={20} />}
-          label="داشبورد"
-          active
-        />
-        <SidebarItem icon={<MapIcon size={20} />} label="مانیتورینگ زنده" />
-        <SidebarItem icon={<Settings size={20} />} label="تنظیمات" />
-      </nav>
-
-      <div className="mt-auto rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
-        <p className="text-sm font-medium">سیستم مدیریت ناوگان</p>
-        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          نسخه ۱.۰.۰
-        </p>
-      </div>
-    </>
-  );
-}
-
 /* ------------------------------ Header ------------------------------ */
 
 function Header({
@@ -386,30 +357,6 @@ function Header({
 }
 
 /* --------------------------- Small helpers --------------------------- */
-
-function SidebarItem({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        'flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition-colors',
-        active
-          ? 'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-400'
-          : 'border-transparent text-neutral-600 hover:border-neutral-200 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:border-neutral-800 dark:hover:bg-neutral-800/60',
-      ].join(' ')}
-    >
-      {icon}
-      <span className="hidden font-medium lg:block">{label}</span>
-    </div>
-  );
-}
 
 function StatCard({
   title,
