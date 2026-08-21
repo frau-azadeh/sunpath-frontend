@@ -50,9 +50,7 @@ export function DriverDispatchView({
                   </span>
                 </div>
 
-                <h2 className="mt-3 text-xl font-black sm:text-2xl">
-                  {dispatch.title}
-                </h2>
+                <h2 className="mt-3 text-xl  sm:text-2xl">{dispatch.title}</h2>
 
                 <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                   زمان برنامه‌ریزی‌شده: {dispatch.scheduledAt}
@@ -115,7 +113,7 @@ export function DriverDispatchView({
 
       <aside className="flex flex-col gap-4">
         <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-          <p className="text-sm font-black">عملیات مأموریت</p>
+          <p className="text-sm ">عملیات مأموریت</p>
 
           <p className="mt-2 text-xs leading-6 text-neutral-500 dark:text-neutral-400">
             وضعیت مأموریت را از همین بخش تغییر دهید.
@@ -127,7 +125,7 @@ export function DriverDispatchView({
                 type="button"
                 onClick={() => void onStartDispatch()}
                 disabled={isSubmitting}
-                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm  text-white transition hover:bg-orange-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
@@ -148,7 +146,7 @@ export function DriverDispatchView({
                 type="button"
                 onClick={() => void onCompleteDispatch()}
                 disabled={isSubmitting}
-                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm  text-white transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
                   <>
@@ -174,7 +172,7 @@ export function DriverDispatchView({
         </section>
 
         <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-          <p className="text-sm font-black">راهنمای راننده</p>
+          <p className="text-sm ">راهنمای راننده</p>
 
           <ul className="mt-4 space-y-3 text-xs leading-6 text-neutral-500 dark:text-neutral-400">
             <li>• قبل از شروع، از روشن‌بودن اینترنت مطمئن شوید.</li>
