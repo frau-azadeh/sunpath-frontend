@@ -184,16 +184,16 @@ Open http://localhost:3000 in your browser. 🎉
 
 text
 ```
-src/
-├── app/ # App Router pages, layouts, and routes
-├── components/ # Reusable UI components
-├── features/ # Domain-based feature modules
-├── hooks/ # Custom React hooks
-├── lib/ # Shared utilities and configurations
-├── services/ # API and SignalR services
-├── store/ # Zustand stores
-├── types/ # Shared TypeScript definitions
-└── styles/ # Global styles
+    src/
+    ├── app/ # App Router pages, layouts, and routes
+    ├── components/ # Reusable UI components
+    ├── features/ # Domain-based feature modules
+    ├── hooks/ # Custom React hooks
+    ├── lib/ # Shared utilities and configurations
+    ├── services/ # API and SignalR services
+    ├── store/ # Zustand stores
+    ├── types/ # Shared TypeScript definitions
+    └── styles/ # Global styles
 ```
 ---
 
