@@ -13,7 +13,7 @@ export function DriverRouteView({ dispatch }: Props) {
       <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between border-b border-neutral-100 p-5 sm:p-6 dark:border-neutral-800">
           <div>
-            <h2 className="text-lg font-black">نقشه و مسیر مأموریت</h2>
+            <h2 className="text-lg ">نقشه و مسیر مأموریت</h2>
 
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               مسیر برنامه‌ریزی‌شده از مبدأ تا مقصد
@@ -32,7 +32,7 @@ export function DriverRouteView({ dispatch }: Props) {
                 <Map size={29} />
               </div>
 
-              <p className="mt-5 text-sm font-black">
+              <p className="mt-5 text-sm ">
                 نقشه‌ی مسیر در این بخش نمایش داده می‌شود
               </p>
 
@@ -48,7 +48,7 @@ export function DriverRouteView({ dispatch }: Props) {
 
       <aside className="flex flex-col gap-5">
         <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-          <p className="text-sm font-black">خلاصه مسیر</p>
+          <p className="text-sm ">خلاصه مسیر</p>
 
           <div className="mt-4 space-y-3">
             <DriverStatCard
