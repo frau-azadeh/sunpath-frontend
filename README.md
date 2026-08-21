@@ -183,6 +183,7 @@ Open http://localhost:3000 in your browser. 🎉
 📁 Project Structure
 
 text
+```
 src/
 ├── app/ # App Router pages, layouts, and routes
 ├── components/ # Reusable UI components
@@ -193,7 +194,7 @@ src/
 ├── store/ # Zustand stores
 ├── types/ # Shared TypeScript definitions
 └── styles/ # Global styles
-
+```
 ---
 
 🗺️ Roadmap
