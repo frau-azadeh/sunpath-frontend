@@ -11,6 +11,8 @@ import type { Dispatch } from '@/types/dispatch';
 import type { Driver } from '@/types/driver';
 import type { Vehicle } from '@/types/vehicle';
 
+type DispatchStatus = 'Assigned' | 'InProgress' | 'Completed' | 'Cancelled';
+
 interface Props {
   dispatches: Dispatch[];
   vehicles: Vehicle[];
@@ -20,7 +22,7 @@ interface Props {
   onAdd: () => void;
   onEdit: (dispatch: Dispatch) => void;
   onDelete: (dispatch: Dispatch) => Promise<void>;
-  onStatusChange: (id: number, status: string) => Promise<void>;
+  onStatusChange: (id: number, status: DispatchStatus) => Promise<void>;
 }
 
 const normalizeText = (value: string): string => {
@@ -44,6 +46,16 @@ export function DispatchesTab({
 }: Props) {
   const [search, setSearch] = useState('');
 
+  const vehicleById = useMemo(
+    () => new Map(vehicles.map((vehicle) => [vehicle.id, vehicle])),
+    [vehicles],
+  );
+
+  const driverById = useMemo(
+    () => new Map(drivers.map((driver) => [driver.id, driver])),
+    [drivers],
+  );
+
   const filteredDispatches = useMemo(() => {
     const query = normalizeText(search);
 
@@ -53,9 +65,7 @@ export function DispatchesTab({
 
     return dispatches.filter((dispatch) => {
       const title = normalizeText(dispatch.title ?? '');
-
       const origin = normalizeText(dispatch.originTitle ?? '');
-
       const destination = normalizeText(dispatch.destinationTitle ?? '');
 
       return (
@@ -69,17 +79,9 @@ export function DispatchesTab({
   return (
     <motion.div
       key="tab-dispatches"
-      initial={{
-        opacity: 0,
-        y: 10,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        duration: 0.25,
-      }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
       className="flex flex-col gap-6"
     >
       <section className="overflow-hidden rounded-[32px] border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
@@ -104,7 +106,9 @@ export function DispatchesTab({
               type="button"
               onClick={() => void onRefresh()}
               disabled={isLoading}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300"
+              title="به‌روزرسانی مأموریت‌ها"
+              aria-label="به‌روزرسانی مأموریت‌ها"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               <RefreshCw
                 size={16}
@@ -128,10 +132,12 @@ export function DispatchesTab({
               <DispatchCard
                 key={item.id}
                 dispatch={item}
-                vehicle={vehicles.find(
-                  (vehicle) => vehicle.id === item.vehicleId,
-                )}
-                driver={drivers.find((driver) => driver.id === item.driverId)}
+                vehicle={vehicleById.get(item.vehicleId)}
+                driver={
+                  item.driverId !== null
+                    ? driverById.get(item.driverId)
+                    : undefined
+                }
                 onAdd={onAdd}
                 onEdit={onEdit}
                 onDelete={onDelete}
@@ -182,7 +188,7 @@ function EmptyState({
         <button
           type="button"
           onClick={onAdd}
-          className="mt-4 flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-orange-700"
+          className="mt-4 flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-orange-700"
         >
           <Plus size={16} />
           ایجاد اولین تخصیص

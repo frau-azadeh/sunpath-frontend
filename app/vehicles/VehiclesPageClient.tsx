@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 
 import { DispatchFormModal } from '@/components/dispatch/DispatchFormModal';
+import { DispatchesTab } from '@/components/dispatch/DispatchesTab';
+import { DriversTab } from '@/components/dispatch/DriversTab';
+import { VehiclesTab } from '@/components/dispatch/VehiclesTab';
 import { DriverFormModal } from '@/components/drivers/DriverFormModal';
 import { VehicleFormModal } from '@/components/vehicles/VehicleFormModal';
 import { dispatchService } from '@/services/dispatchService';
@@ -31,10 +34,6 @@ import type {
   UpdateDriverRequest,
 } from '@/types/driver';
 import type { CreateVehicleRequest, Vehicle } from '@/types/vehicle';
-
-import { DispatchesTab } from './DispatchesTab';
-import { DriversTab } from './DriversTab';
-import { VehiclesTab } from './VehiclesTab';
 
 type ActiveTab = 'vehicles' | 'drivers' | 'dispatches';
 type LoadState = 'loading' | 'error' | 'success';
@@ -493,20 +492,13 @@ export default function VehiclesPageClient({
   };
 
   const handleDeleteDispatch = async (dispatch: Dispatch): Promise<void> => {
-    const confirmed = window.confirm(
-      `آیا از حذف مأموریت «${dispatch.title || dispatch.id}» مطمئن هستید؟`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await dispatchService.remove(dispatch.id);
 
+      // حذف لوکال انجام نمی‌دهیم؛ لیست مجدداً از Store / API خوانده می‌شود.
       await fetchDispatches();
     } catch (error: unknown) {
-      console.error('Delete dispatch error:', error);
+      throw new Error(getErrorMessage(error));
     }
   };
 

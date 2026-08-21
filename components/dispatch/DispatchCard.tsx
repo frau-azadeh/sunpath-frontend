@@ -11,10 +11,13 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import type { Dispatch } from '@/types/dispatch';
 import type { Driver } from '@/types/driver';
 import type { Vehicle } from '@/types/vehicle';
+
+type DispatchStatus = 'Assigned' | 'InProgress' | 'Completed' | 'Cancelled';
 
 interface DispatchCardProps {
   dispatch: Dispatch;
@@ -23,13 +26,10 @@ interface DispatchCardProps {
 
   onAdd?: () => void;
 
-  onStatusChange?: (
-    id: number,
-    status: 'Assigned' | 'InProgress' | 'Completed' | 'Cancelled',
-  ) => void;
+  onStatusChange?: (id: number, status: DispatchStatus) => void | Promise<void>;
 
   onEdit?: (dispatch: Dispatch) => void;
-  onDelete?: (dispatch: Dispatch) => void;
+  onDelete?: (dispatch: Dispatch) => Promise<void>;
 }
 
 export function DispatchCard({
@@ -41,6 +41,8 @@ export function DispatchCard({
   onEdit,
   onDelete,
 }: DispatchCardProps) {
+  const dispatchTitle = dispatch.title || `مأموریت #${dispatch.id}`;
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Assigned':
@@ -81,6 +83,64 @@ export function DispatchCard({
     }
   };
 
+  const handleDeleteRequest = () => {
+    if (!onDelete) return;
+
+    toast.warning('آیا از حذف مأموریت مطمئن هستید؟', {
+      id: `delete-dispatch-confirm-${dispatch.id}`,
+      description: `مأموریت «${dispatchTitle}» به‌صورت دائمی حذف خواهد شد.`,
+      duration: 10_000,
+
+      action: {
+        label: 'حذف کن',
+        onClick: async () => {
+          const loadingToastId = `delete-dispatch-loading-${dispatch.id}`;
+
+          try {
+            toast.loading('در حال حذف مأموریت...', {
+              id: loadingToastId,
+            });
+
+            // API و refresh در والد انجام می‌شود.
+            await onDelete(dispatch);
+
+            toast.success('مأموریت با موفقیت حذف شد.', {
+              id: loadingToastId,
+              description: `«${dispatchTitle}» از فهرست مأموریت‌ها حذف شد.`,
+            });
+          } catch (error) {
+            toast.error('حذف مأموریت ناموفق بود.', {
+              id: loadingToastId,
+              description:
+                error instanceof Error
+                  ? error.message
+                  : 'لطفاً دوباره تلاش کنید.',
+            });
+          }
+        },
+      },
+    });
+  };
+
+  const handleStatusChange = async (status: DispatchStatus) => {
+    if (!onStatusChange) return;
+
+    try {
+      await onStatusChange(dispatch.id, status);
+
+      toast.success(
+        status === 'InProgress'
+          ? 'مأموریت با موفقیت شروع شد.'
+          : 'مأموریت با موفقیت تکمیل شد.',
+      );
+    } catch (error) {
+      toast.error('به‌روزرسانی وضعیت ناموفق بود.', {
+        description:
+          error instanceof Error ? error.message : 'لطفاً دوباره تلاش کنید.',
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900">
       <div>
@@ -92,7 +152,7 @@ export function DispatchCard({
 
             <div>
               <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                {dispatch.title || `مأموریت #${dispatch.id}`}
+                {dispatchTitle}
               </h3>
 
               <span className="text-[11px] text-neutral-400">
@@ -104,7 +164,6 @@ export function DispatchCard({
           {getStatusBadge(String(dispatch.status))}
         </div>
 
-        {/* Vehicle + Driver */}
         <div className="mt-3.5 grid grid-cols-2 gap-2 text-xs">
           <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
             <span className="font-semibold text-neutral-400">پلاک:</span>
@@ -115,17 +174,16 @@ export function DispatchCard({
           </div>
 
           <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
-            <User size={13} className="text-neutral-400" />
+            <User size={13} className="shrink-0 text-neutral-400" />
 
-            <span>
+            <span className="truncate">
               {driver
                 ? `${driver.firstName} ${driver.lastName}`
-                : `راننده #${dispatch.driverId}`}
+                : 'راننده تخصیص داده نشده'}
             </span>
           </div>
         </div>
 
-        {/* Route */}
         <div className="mt-4 flex flex-col gap-2 rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
           <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
             <MapPin size={14} className="shrink-0" />
@@ -147,15 +205,12 @@ export function DispatchCard({
         </div>
       </div>
 
-      {/* Actions */}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
         <div className="flex flex-wrap items-center gap-2">
           {onAdd && (
             <button
               type="button"
               onClick={onAdd}
-              title="افزودن مأموریت"
-              aria-label="افزودن مأموریت"
               className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-blue-700"
             >
               <Plus size={14} />
@@ -166,7 +221,7 @@ export function DispatchCard({
           {dispatch.status === 'Assigned' && onStatusChange && (
             <button
               type="button"
-              onClick={() => onStatusChange(dispatch.id, 'InProgress')}
+              onClick={() => void handleStatusChange('InProgress')}
               className="flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-700"
             >
               <Clock size={13} />
@@ -177,7 +232,7 @@ export function DispatchCard({
           {dispatch.status === 'InProgress' && onStatusChange && (
             <button
               type="button"
-              onClick={() => onStatusChange(dispatch.id, 'Completed')}
+              onClick={() => void handleStatusChange('Completed')}
               className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700"
             >
               <CheckCircle2 size={13} />
@@ -191,8 +246,6 @@ export function DispatchCard({
             <button
               type="button"
               onClick={() => onEdit(dispatch)}
-              title="ویرایش مأموریت"
-              aria-label="ویرایش مأموریت"
               className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-bold text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               <Edit3 size={13} />
@@ -203,9 +256,7 @@ export function DispatchCard({
           {onDelete && (
             <button
               type="button"
-              onClick={() => onDelete(dispatch)}
-              title="حذف مأموریت"
-              aria-label="حذف مأموریت"
+              onClick={handleDeleteRequest}
               className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
             >
               <Trash2 size={13} />
