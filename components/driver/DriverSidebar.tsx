@@ -45,7 +45,7 @@ export function DriverSidebar({ profile, activeTab, onTabChange }: Props) {
         </div>
 
         <div>
-          <p className="text-lg font-black tracking-tight">SunPath Driver</p>
+          <p className="text-lg  tracking-tight">SunPath Driver</p>
 
           <p className="mt-0.5 text-[11px] tracking-[0.14em] text-neutral-400">
             FLEET TRACKING SYSTEM
@@ -80,7 +80,7 @@ export function DriverSidebar({ profile, activeTab, onTabChange }: Props) {
               </span>
 
               <span className="min-w-0">
-                <span className="block text-sm font-black">{item.label}</span>
+                <span className="block text-sm ">{item.label}</span>
 
                 <span className="mt-1 block truncate text-[11px] font-normal text-neutral-400">
                   {item.description}
@@ -96,14 +96,12 @@ export function DriverSidebar({ profile, activeTab, onTabChange }: Props) {
         onClick={() => onTabChange('profile')}
         className="mt-auto flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-right transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-800"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-sm font-black text-white">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-sm  text-white">
           {profile.avatarInitials}
         </span>
 
         <span className="min-w-0">
-          <span className="block truncate text-sm font-black">
-            {profile.fullName}
-          </span>
+          <span className="block truncate text-sm ">{profile.fullName}</span>
 
           <span className="mt-1 block text-[11px] text-neutral-500 dark:text-neutral-400">
             راننده SunPath
