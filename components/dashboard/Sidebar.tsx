@@ -71,7 +71,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           <div className="min-w-0">
             <h1
               className="
-                truncate text-lg font-black tracking-tight
+                truncate text-lg  tracking-tight
                 text-neutral-900
                 dark:text-white
               "
