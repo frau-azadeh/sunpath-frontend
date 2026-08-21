@@ -200,7 +200,7 @@ export const DriverFormModal = ({
                 <div className="min-w-0">
                   <h2
                     id="driver-form-title"
-                    className="truncate text-xl font-black text-neutral-900 dark:text-white"
+                    className="truncate text-xl  text-neutral-900 dark:text-white"
                   >
                     {initialData ? 'ویرایش اطلاعات راننده' : 'ثبت راننده جدید'}
                   </h2>

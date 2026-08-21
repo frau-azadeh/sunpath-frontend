@@ -184,7 +184,7 @@ export function VehicleFormModal({
                 <div>
                   <h2
                     id="vehicle-form-title"
-                    className="text-lg font-black text-neutral-900 dark:text-white"
+                    className="text-lg  text-neutral-900 dark:text-white"
                   >
                     {initialData ? 'ویرایش خودرو' : 'ثبت خودرو جدید'}
                   </h2>

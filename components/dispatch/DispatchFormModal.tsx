@@ -230,7 +230,7 @@ function DispatchFormContent({
           </div>
 
           <div>
-            <h2 className="text-base font-black text-neutral-900 dark:text-white">
+            <h2 className="text-base  text-neutral-900 dark:text-white">
               {isEditMode ? 'ویرایش مأموریت' : 'تخصیص خودرو و تعریف مأموریت'}
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">

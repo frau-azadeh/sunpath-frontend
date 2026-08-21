@@ -559,8 +559,8 @@ export default function VehiclesPageClient({
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-neutral-900 dark:text-white">
-                  مدیریت جامع ناوگان 
+                <h1 className="text-xl  text-neutral-900 dark:text-white">
+                  مدیریت جامع ناوگان
                 </h1>
 
                 <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
@@ -954,7 +954,7 @@ function ConfirmDeleteModal({
                 </div>
 
                 <div>
-                  <h2 className="text-base font-black text-neutral-900 dark:text-white">
+                  <h2 className="text-base  text-neutral-900 dark:text-white">
                     {title}
                   </h2>
 

@@ -180,7 +180,7 @@ export function VehicleTableRow({
           <div className="min-w-0">
             <p
               dir="ltr"
-              className="truncate text-sm font-black text-neutral-900 dark:text-white"
+              className="truncate text-sm  text-neutral-900 dark:text-white"
             >
               {plateNumber}
             </p>

@@ -85,7 +85,7 @@ export function VehicleStats({
                   {stat.label}
                 </p>
 
-                <p className="mt-1 text-xl font-black text-neutral-900 dark:text-white">
+                <p className="mt-1 text-xl  text-neutral-900 dark:text-white">
                   {faNumber(stat.value)}
                   <span className="mr-1 text-xs font-medium text-neutral-400">
                     دستگاه
