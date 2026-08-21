@@ -46,9 +46,7 @@ export function DriverTopbar({ profile, activeTab, onProfileClick }: Props) {
     <header className="sticky top-0 z-30 border-b border-neutral-200/80 bg-neutral-50/90 px-4 py-3 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-950/90 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-base font-black sm:text-lg">
-            {pageTitle.title}
-          </h1>
+          <h1 className="truncate text-base  sm:text-lg">{pageTitle.title}</h1>
 
           <p className="mt-1 hidden text-xs text-neutral-500 dark:text-neutral-400 sm:block">
             {pageTitle.description}
@@ -94,7 +92,7 @@ export function DriverTopbar({ profile, activeTab, onProfileClick }: Props) {
               {profile.fullName}
             </span>
 
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 text-[10px] font-black text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 text-[10px]  text-white">
               {profile.avatarInitials}
             </span>
 
