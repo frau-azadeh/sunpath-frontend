@@ -17,7 +17,7 @@ export function DriverTrackingCard({ status }: Props) {
         </div>
 
         <div>
-          <p className="text-sm font-black">ردیابی موقعیت</p>
+          <p className="text-sm ">ردیابی موقعیت</p>
 
           <p className="mt-1 text-xs leading-6 text-neutral-500 dark:text-neutral-400">
             موقعیت گوشی راننده در زمان اجرای مأموریت برای مرکز کنترل ارسال
