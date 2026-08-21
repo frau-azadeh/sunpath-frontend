@@ -14,7 +14,7 @@ export function DriverStatCard({ icon, label, value }: Props) {
         <span className="text-xs">{label}</span>
       </div>
 
-      <p className="mt-2 text-sm font-black text-neutral-800 dark:text-neutral-100">
+      <p className="mt-2 text-sm  text-neutral-800 dark:text-neutral-100">
         {value}
       </p>
     </div>
