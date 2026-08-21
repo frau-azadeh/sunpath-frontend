@@ -22,7 +22,6 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 
 import { dispatchService } from '@/services/dispatchService';
@@ -100,17 +99,22 @@ const statusConfig: Record<
 };
 
 export function DriverDispatchPageClient() {
-  const { resolvedTheme, setTheme } = useTheme();
-
   const [activeTab, setActiveTab] = useState<DriverPageTab>('dispatch');
-
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [dispatch, setDispatch] = useState<DriverActiveDispatch>(mockDispatch);
 
   const handleThemeToggle = (): void => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+    const rootElement = document.documentElement;
+    const isDarkTheme = rootElement.classList.contains('dark');
+
+    if (isDarkTheme) {
+      rootElement.classList.remove('dark');
+      localStorage.setItem('sunpath-theme', 'light');
+    } else {
+      rootElement.classList.add('dark');
+      localStorage.setItem('sunpath-theme', 'dark');
+    }
   };
 
   const handleStartDispatch = async (): Promise<void> => {
@@ -174,12 +178,12 @@ export function DriverDispatchPageClient() {
               className="flex min-w-0 items-center gap-2.5 rounded-2xl p-1 text-right transition hover:bg-neutral-100 dark:hover:bg-neutral-900"
               aria-label="نمایش پروفایل راننده"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-600 text-sm font-black text-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-600 text-sm  text-white">
                 {mockDriverProfile.avatarInitials}
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-black">
+                <p className="truncate text-sm ">
                   {mockDriverProfile.fullName}
                 </p>
 
@@ -207,13 +211,9 @@ export function DriverDispatchPageClient() {
                 aria-label="تغییر حالت نمایش"
                 title="تغییر حالت روشن و تیره"
               >
-                <span suppressHydrationWarning>
-                  {resolvedTheme === 'dark' ? (
-                    <Sun size={18} className="text-amber-400" />
-                  ) : (
-                    <Moon size={18} />
-                  )}
-                </span>
+                <Moon size={18} className="block dark:hidden" />
+
+                <Sun size={18} className="hidden text-amber-400 dark:block" />
               </button>
             </div>
           </div>
@@ -227,9 +227,7 @@ export function DriverDispatchPageClient() {
               </div>
 
               <div>
-                <p className="text-lg font-black tracking-tight">
-                  SunPath Driver
-                </p>
+                <p className="text-lg  tracking-tight">SunPath Driver</p>
 
                 <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
                   مدیریت مأموریت و مسیر راننده
@@ -273,7 +271,6 @@ export function DriverDispatchPageClient() {
         onClose={() => setIsProfileOpen(false)}
         onOpenSettings={() => {
           setIsProfileOpen(false);
-
           toast.info('تنظیمات حساب کاربری پس از پیاده‌سازی لاگین فعال می‌شود.');
         }}
       />
@@ -315,7 +312,7 @@ function DispatchContent({
                 </span>
               </div>
 
-              <h1 className="mt-2 text-xl font-black">{dispatch.title}</h1>
+              <h1 className="mt-2 text-xl ">{dispatch.title}</h1>
 
               <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                 زمان برنامه‌ریزی‌شده: {dispatch.scheduledAt}
@@ -382,7 +379,7 @@ function DispatchContent({
           type="button"
           onClick={() => void onStartDispatch()}
           disabled={isSubmitting}
-          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 text-base font-black text-white transition hover:bg-orange-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 text-base  text-white transition hover:bg-orange-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -403,7 +400,7 @@ function DispatchContent({
           type="button"
           onClick={() => void onCompleteDispatch()}
           disabled={isSubmitting}
-          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-base font-black text-white transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-base  text-white transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -475,7 +472,7 @@ function RouteContent({ dispatch }: { dispatch: DriverActiveDispatch }) {
       <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between border-b border-neutral-100 p-5 dark:border-neutral-800">
           <div>
-            <p className="text-lg font-black">مسیر مأموریت</p>
+            <p className="text-lg ">مسیر مأموریت</p>
 
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               اطلاعات مسیر برنامه‌ریزی‌شده
@@ -508,7 +505,7 @@ function RouteContent({ dispatch }: { dispatch: DriverActiveDispatch }) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-        <p className="text-sm font-black">خلاصه‌ی مسیر</p>
+        <p className="text-sm ">خلاصه‌ی مسیر</p>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <SmallStat
@@ -541,12 +538,12 @@ function ProfileContent({
     <div className="flex flex-col gap-5">
       <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-orange-600 text-lg font-black text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-orange-600 text-lg  text-white">
             {profile.avatarInitials}
           </div>
 
           <div>
-            <h1 className="text-lg font-black">{profile.fullName}</h1>
+            <h1 className="text-lg ">{profile.fullName}</h1>
 
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
               کد راننده: {profile.driverCode}
@@ -682,12 +679,12 @@ function ProfileSheet({
 
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-600 text-base font-black text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-600 text-base  text-white">
               {profile.avatarInitials}
             </div>
 
             <div>
-              <p className="text-base font-black">{profile.fullName}</p>
+              <p className="text-base ">{profile.fullName}</p>
 
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 {profile.phoneNumber}
@@ -779,7 +776,7 @@ function SmallStat({
         <span className="text-xs">{label}</span>
       </div>
 
-      <p className="mt-2 text-sm font-black text-neutral-800 dark:text-neutral-100">
+      <p className="mt-2 text-sm  text-neutral-800 dark:text-neutral-100">
         {value}
       </p>
     </div>
