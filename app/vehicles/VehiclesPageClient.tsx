@@ -560,7 +560,7 @@ export default function VehiclesPageClient({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-black text-neutral-900 dark:text-white">
-                  مدیریت جامع ناوگان و دیسپچ
+                  مدیریت جامع ناوگان 
                 </h1>
 
                 <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
@@ -569,7 +569,7 @@ export default function VehiclesPageClient({
               </div>
 
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                پایش، تخصیص خودرو به راننده، مسیریابی و کنترل مأموریت‌ها
+                پایش، تخصیص خودرو به راننده کنترل مأموریت‌ها
               </p>
             </div>
           </div>
