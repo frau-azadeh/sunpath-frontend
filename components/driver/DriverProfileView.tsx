@@ -20,12 +20,12 @@ export function DriverProfileView({ profile }: Props) {
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex flex-col gap-5 border-b border-neutral-100 pb-6 sm:flex-row sm:items-center dark:border-neutral-800">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-orange-600 text-xl font-black text-white">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-orange-600 text-xl  text-white">
             {profile.avatarInitials}
           </div>
 
           <div className="min-w-0">
-            <h2 className="text-xl font-black">{profile.fullName}</h2>
+            <h2 className="text-xl ">{profile.fullName}</h2>
 
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
               کد راننده: {profile.driverCode}
@@ -39,7 +39,7 @@ export function DriverProfileView({ profile }: Props) {
         </div>
 
         <div className="mt-6">
-          <p className="text-sm font-black">اطلاعات تماس</p>
+          <p className="text-sm ">اطلاعات تماس</p>
 
           <div className="mt-4 flex items-center gap-3 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
@@ -78,7 +78,7 @@ export function DriverProfileView({ profile }: Props) {
             </span>
 
             <div>
-              <p className="text-sm font-black">آمار راننده</p>
+              <p className="text-sm ">آمار راننده</p>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 خلاصه عملکرد ثبت‌شده
               </p>
@@ -101,7 +101,7 @@ export function DriverProfileView({ profile }: Props) {
         </section>
 
         <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-          <p className="text-sm font-black">درباره حساب کاربری</p>
+          <p className="text-sm ">درباره حساب کاربری</p>
 
           <p className="mt-3 text-xs leading-7 text-neutral-500 dark:text-neutral-400">
             پس از ساخت سیستم Login، اطلاعات این بخش از حساب راننده‌ی واردشده
