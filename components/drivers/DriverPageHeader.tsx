@@ -8,7 +8,7 @@ export const DriverPageHeader = ({ onCreate }: DriverPageHeaderProps) => {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">
+        <h1 className="text-2xl  tracking-tight text-foreground md:text-3xl">
           ناوگان رانندگان
         </h1>
 
