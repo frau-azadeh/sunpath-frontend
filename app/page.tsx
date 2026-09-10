@@ -20,8 +20,7 @@ import { useTheme } from 'next-themes';
 import Sidebar from '@/components/dashboard/Sidebar';
 import LiveMapLoader from '@/components/map/LiveMapLoader';
 import { faNumber } from '@/lib/format';
-import { signalRService } from '@/services/signalrService';
-import { vehicleService } from '@/services/vehicleService';
+import { useVehicleStore } from '@/store/useVehicleStore';
 import type { Vehicle } from '@/types/vehicle';
 
 type DashboardStats = {
@@ -78,45 +77,14 @@ export default function SunPathDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [statsError, setStatsError] = useState<string | null>(null);
+  const vehicles = useVehicleStore((state) => state.vehicles);
+  const isLoadingStats = useVehicleStore((state) => state.isLoading);
+  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+  const [statsError] = useState<string | null>(null);
 
-  // بارگذاری اولیه فقط یک‌بار در mount؛
-  // هیچ setState سنکرونی در بدنه effect انجام نمی‌شود.
   useEffect(() => {
-    void signalRService.startConnection();
-
-    let isMounted = true;
-
-    const fetchInitialStats = async (): Promise<void> => {
-      try {
-        const data = await vehicleService.getAll();
-
-        if (isMounted) {
-          setVehicles(Array.isArray(data) ? data : []);
-          setStatsError(null);
-        }
-      } catch (error) {
-        console.error('Dashboard vehicles stats error:', error);
-
-        if (isMounted) {
-          setVehicles([]);
-          setStatsError('خطا در دریافت آمار خودروها');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingStats(false);
-        }
-      }
-    };
-
-    void fetchInitialStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    void loadVehicles();
+  }, [loadVehicles]);
 
   const stats = useMemo(() => calculateDashboardStats(vehicles), [vehicles]);
 
