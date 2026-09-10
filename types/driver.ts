@@ -6,6 +6,8 @@ export interface Driver {
   phone: string;
   licenseType: number;
   createdAt: string;
+  username: string;
+  isActive: boolean;
 }
 
 export interface CreateDriverRequest {
@@ -14,8 +16,11 @@ export interface CreateDriverRequest {
   nationalId: string;
   phone: string;
   licenseType: number;
+  username: string;
+  password: string;
 }
 
 export interface UpdateDriverRequest extends CreateDriverRequest {
   id: number;
+  password: string;
 }
