@@ -2,20 +2,36 @@
 import * as signalR from '@microsoft/signalr';
 
 import { useVehicleStore } from '@/store/useVehicleStore';
+import type { Vehicle } from '@/types/fleet';
 
-type VehiclePositionPayload = {
+export type VehiclePayload = {
   id?: number | string;
   vehicleId?: number | string;
-
-  latitude?: number | string;
-  longitude?: number | string;
-
-  lat?: number | string;
-  lng?: number | string;
-  lon?: number | string;
-
-  speed?: number | string;
-  heading?: number | string;
+  plateNumber?: string | null;
+  status?: number | string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
+  lon?: number | string | null;
+  lastLatitude?: number | string | null;
+  lastLongitude?: number | string | null;
+  speed?: number | string | null;
+  heading?: number | string | null;
+  lastUpdate?: string | null;
+  originLat?: number | string | null;
+  originLng?: number | string | null;
+  destinationLat?: number | string | null;
+  destinationLng?: number | string | null;
+  originAddress?: string | null;
+  destinationAddress?: string | null;
+  activeDispatchId?: number | null;
+  activeDispatchDriverId?: number | null;
+  dispatchStatus?: string | null;
+  fuelConsumedLiters?: number | null;
+  tripDistanceKm?: number | null;
+  tripDurationSeconds?: number | null;
+  stopDurationSeconds?: number | null;
 };
 
 class SignalRService {
@@ -24,14 +40,17 @@ class SignalRService {
   private stopTimer: ReturnType<typeof setTimeout> | null = null;
   private configRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private readonly eventName = 'VehiclePositionChanged';
+  private readonly eventPositionChanged = 'VehiclePositionChanged';
+  private readonly eventCreated = 'VehicleCreated';
+  private readonly eventUpdated = 'VehicleUpdated';
+  private readonly eventDeleted = 'VehicleDeleted';
 
   private getHubUrl(): string | null {
     if (typeof window === 'undefined') {
       return null;
     }
 
-    const apiBaseUrl = window.CONFIG?.NEXT_PUBLIC_API_BASE?.trim();
+    const apiBaseUrl = (window as any).CONFIG?.NEXT_PUBLIC_API_BASE?.trim();
 
     if (!apiBaseUrl) {
       return null;
@@ -70,7 +89,6 @@ class SignalRService {
 
     const hubUrl = this.getHubUrl();
 
-    // اگر CONFIG هنوز آماده نشده، داینامیک retry کن
     if (!hubUrl) {
       if (!this.configRetryTimer) {
         console.log(
@@ -103,8 +121,13 @@ class SignalRService {
 
     this.startPromise = connection
       .start()
-      .then(() => {
+      .then(async () => {
         console.log('[SignalR] Connected successfully:', hubUrl);
+        try {
+          await connection.invoke('SubscribeLiveMap');
+        } catch (error) {
+          console.warn('[SignalR] Could not subscribe live-map group:', error);
+        }
       })
       .catch((error: unknown) => {
         console.error('[SignalR] Connection start failed:', error);
@@ -119,39 +142,71 @@ class SignalRService {
   }
 
   private registerHandlers(connection: signalR.HubConnection): void {
-    connection.on(this.eventName, (data: VehiclePositionPayload) => {
-      console.log(`[SignalR] ${this.eventName} received:`, data);
+    const handleVehicleUpsert = (eventName: string, data: VehiclePayload) => {
+      console.log(`[SignalR] ${eventName} received:`, data);
 
-      const rawVehicleId = data.id ?? data.vehicleId;
-      const rawLatitude = data.latitude ?? data.lat;
-      const rawLongitude = data.longitude ?? data.lng ?? data.lon;
-
-      const vehicleId = Number(rawVehicleId);
-      const latitude = Number(rawLatitude);
-      const longitude = Number(rawLongitude);
-      const speed = Number(data.speed ?? 0);
-      const heading = Number(data.heading ?? 0);
-
-      if (!Number.isFinite(vehicleId)) {
-        console.warn('[SignalR] Invalid vehicle id:', data);
+      const resolvedId = data.id ?? data.vehicleId;
+      if (resolvedId === undefined || resolvedId === null || resolvedId === '') {
+        console.warn(`[SignalR] Ignored ${eventName} due to missing id:`, data);
         return;
       }
 
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        console.warn('[SignalR] Invalid vehicle coordinates:', data);
-        return;
-      }
+      const resolvedLat = Number(data.latitude ?? data.lat ?? data.lastLatitude ?? 0);
+      const resolvedLng = Number(data.longitude ?? data.lng ?? data.lon ?? data.lastLongitude ?? 0);
 
-      useVehicleStore
-        .getState()
-        .updateVehiclePosition(
-          vehicleId,
-          latitude,
-          longitude,
-          Number.isFinite(speed) ? speed : 0,
-          Number.isFinite(heading) ? heading : 0,
-        );
+      // ارسال مطمئن با تایپ تضمین‌شده id (حل خطای ts 2345)
+      useVehicleStore.getState().upsertVehicleRealtime({
+        ...data,
+        id: resolvedId,
+        latitude: resolvedLat,
+        longitude: resolvedLng,
+        lastLatitude: resolvedLat,
+        lastLongitude: resolvedLng,
+        speed: Number(data.speed ?? 0),
+        heading: Number(data.heading ?? 0),
+      } as Partial<Vehicle> & { id: number | string });
+    };
+
+    // ۱. ایونت تغییر موقعیت لحظه‌ای
+    connection.on(this.eventPositionChanged, (data: VehiclePayload) => {
+      handleVehicleUpsert(this.eventPositionChanged, data);
     });
+
+    connection.on('vehicleLocationUpdated', (data: VehiclePayload) => {
+      handleVehicleUpsert('vehicleLocationUpdated', data);
+    });
+
+    // ۲. ایونت ایجاد خودرو جدید
+    connection.on(this.eventCreated, (data: VehiclePayload) => {
+      handleVehicleUpsert(this.eventCreated, data);
+    });
+
+    // ۳. ایونت ویرایش اطلاعات خودرو
+    connection.on(this.eventUpdated, (data: VehiclePayload) => {
+      handleVehicleUpsert(this.eventUpdated, data);
+    });
+
+    // ۴. ایونت حذف خودرو
+    connection.on(
+      this.eventDeleted,
+      (deletedIdPayload: number | string | { id?: number | string; vehicleId?: number | string }) => {
+        console.log(`[SignalR] ${this.eventDeleted} received:`, deletedIdPayload);
+
+        let vehicleId: number | string | undefined;
+
+        if (typeof deletedIdPayload === 'number' || typeof deletedIdPayload === 'string') {
+          vehicleId = deletedIdPayload;
+        } else if (deletedIdPayload && typeof deletedIdPayload === 'object') {
+          vehicleId = deletedIdPayload.id ?? deletedIdPayload.vehicleId;
+        }
+
+        if (vehicleId !== undefined && vehicleId !== null && vehicleId !== '') {
+          useVehicleStore.getState().removeVehicle(vehicleId);
+        } else {
+          console.warn('[SignalR] Invalid vehicle ID in VehicleDeleted:', deletedIdPayload);
+        }
+      },
+    );
 
     connection.onreconnecting((error) => {
       console.warn('[SignalR] Reconnecting...', error);
@@ -205,7 +260,7 @@ class SignalRService {
       try {
         await this.startPromise;
       } catch {
-        // handled already
+        // handled
       }
     }
 
