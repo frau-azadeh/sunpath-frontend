@@ -1,112 +1,78 @@
 'use client';
 
-import { useEffect } from 'react';
-
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from 'react';
 import {
   MapContainer,
+  TileLayer,
   Marker,
   Polyline,
-  TileLayer,
-  useMap,
   useMapEvents,
+  useMap,
 } from 'react-leaflet';
+import L from 'leaflet';
+import { Layers, AlertCircle } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
-import type { LocationPickerMapProps } from './LocationPickerMap';
+// تنظیم آیکون‌های استاندارد Leaflet در Next.js
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
-const defaultCenter: [number, number] = [35.6892, 51.389]; // Tehran
-
-function createPinIcon(color: string, arrow: string, shadowColor: string) {
-  return L.divIcon({
-    className: '',
-    html: `
-      <div style="
-        position: relative;
-        width: 42px;
-        height: 56px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transform: translateY(-2px);
-      ">
-        <div style="
-          position: absolute;
-          inset: 0;
-          width: 42px;
-          height: 42px;
-          margin: 0 auto;
-          border-radius: 9999px 9999px 9999px 4px;
-          background: ${color};
-          transform: rotate(45deg);
-          box-shadow: 0 10px 24px ${shadowColor};
-          border: 2px solid rgba(255,255,255,0.95);
-        "></div>
-
-        <div style="
-          position: relative;
-          z-index: 2;
-          width: 32px;
-          height: 32px;
-          border-radius: 9999px;
-          background: rgba(0,0,0,0.08);
-          backdrop-filter: blur(2px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 18px;
-          font-weight: 900;
-          line-height: 1;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-        ">${arrow}</div>
-
-        <div style="
-          position: absolute;
-          bottom: 1px;
-          width: 0;
-          height: 0;
-          border-left: 7px solid transparent;
-          border-right: 7px solid transparent;
-          border-top: 14px solid ${color};
-          filter: drop-shadow(0 4px 6px ${shadowColor});
-        "></div>
-      </div>
-    `,
-    iconSize: [42, 56],
-    iconAnchor: [21, 56],
-    popupAnchor: [0, -52],
+// آیکون‌های کاستوم مبدأ و مقصد
+const createPin = (color: string, text: string) =>
+  L.divIcon({
+    className: 'custom-pin',
+    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold;">${text}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
   });
+
+const originPin = createPin('#10b981', 'مبدأ');
+const destinationPin = createPin('#ef4444', 'مقصد');
+
+interface Coords {
+  lat: number;
+  lng: number;
 }
 
-const originIcon = createPinIcon('#10b981', '●', 'rgba(16,185,129,0.45)');
-const destinationIcon = createPinIcon('#f43f5e', '✓', 'rgba(244,63,94,0.45)');
+interface LocationPickerMapClientProps {
+  origin: Coords | null;
+  destination: Coords | null;
+  activeMode: 'origin' | 'destination';
+  onLocationSelect: (lat: number, lng: number) => void;
+  // آزاده جون اگه کلید Neshan داری می‌تونی پاس بدی، در غیر این صورت از سرور ترافیک اوپن استفاده می‌کنه
+  neshanApiKey?: string;
+}
 
-function MapClickHandler({
-  onLocationSelect,
-}: Pick<LocationPickerMapProps, 'onLocationSelect'>) {
+function MapEvents({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
   useMapEvents({
-    click(event) {
-      onLocationSelect(event.latlng.lat, event.latlng.lng);
+    click(e) {
+      onSelect(e.latlng.lat, e.latlng.lng);
     },
   });
-
   return null;
 }
 
-function MapUpdater({
-  origin,
-  destination,
-}: Pick<LocationPickerMapProps, 'origin' | 'destination'>) {
+function MapBoundsSync({ origin, destination }: { origin: Coords | null; destination: Coords | null }) {
   const map = useMap();
-
   useEffect(() => {
-    const point = origin ?? destination;
-    if (point) {
-      map.setView([point.lat, point.lng], 14, { animate: true });
+    if (origin && destination) {
+      map.fitBounds(
+        [
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+        ],
+        { padding: [40, 40], maxZoom: 16 }
+      );
+    } else if (origin) {
+      map.setView([origin.lat, origin.lng], 14);
+    } else if (destination) {
+      map.setView([destination.lat, destination.lng], 14);
     }
-  }, [map, origin, destination]);
-
+  }, [origin, destination, map]);
   return null;
 }
 
@@ -115,83 +81,99 @@ export default function LocationPickerMapClient({
   destination,
   activeMode,
   onLocationSelect,
-}: LocationPickerMapProps) {
-  useEffect(() => {
-    delete (
-      L.Icon.Default.prototype as unknown as {
-        _getIconUrl?: unknown;
-      }
-    )._getIconUrl;
+  neshanApiKey,
+}: LocationPickerMapClientProps) {
+  const [showTraffic, setShowTraffic] = useState<boolean>(true);
+  const defaultCenter: [number, number] = [35.6997, 51.338]; // تهران - میدان آزادی
 
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: '/leaflet/marker-icon-2x.png',
-      iconUrl: '/leaflet/marker-icon.png',
-      shadowUrl: '/leaflet/marker-shadow.png',
-    });
-  }, []);
-
-  const center: [number, number] =
-    origin?.lat != null && origin?.lng != null
-      ? [origin.lat, origin.lng]
-      : destination?.lat != null && destination?.lng != null
-        ? [destination.lat, destination.lng]
-        : defaultCenter;
-
-  const hasBoth = Boolean(origin && destination);
-
-  const linePositions: [number, number][] =
-    origin && destination
-      ? [
-          [origin.lat, origin.lng],
-          [destination.lat, destination.lng],
-        ]
-      : [];
+  // URL لایه ترافیک:
+  // اگر neshanApiKey باشد مستقیماً از وب‌سرویس نشان لود می‌شود، در غیر این صورت لایه ترافیک استاندارد و بدون محدودیت
+  const trafficTileUrl = neshanApiKey
+    ? `https://api.neshan.org/v1/traffic?x={x}&y={y}&z={z}`
+    : `https://mt1.google.com/vt?lyrs=h,traffic&x={x}&y={y}&z={z}`;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800">
-      <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-[11px] font-bold text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
-        <span>حالت انتخاب: {activeMode === 'origin' ? 'مبدأ' : 'مقصد'}</span>
+    <div className="relative h-[320px] w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-inner dark:border-neutral-800 dark:bg-neutral-950">
+      {/* دکمه کنترل لایه ترافیک */}
+      <div className="absolute top-3 right-3 z-[400] flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/95 p-1 shadow-md backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
+        <button
+          type="button"
+          onClick={() => setShowTraffic((v) => !v)}
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+            showTraffic
+              ? 'bg-orange-500 text-white shadow-sm'
+              : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+          }`}
+        >
+          <Layers size={13} />
+          <span>{showTraffic ? 'ترافیک زنده روشن' : 'نمایش ترافیک'}</span>
+        </button>
+      </div>
+
+      {/* راهنمای حالت جاری */}
+      <div className="absolute bottom-3 left-3 z-[400] flex items-center gap-2 rounded-xl bg-neutral-900/90 px-3 py-1.5 text-xs text-white backdrop-blur shadow-sm">
+        <span
+          className={`h-2.5 w-2.5 rounded-full ${
+            activeMode === 'origin' ? 'bg-emerald-400' : 'bg-rose-400'
+          }`}
+        />
         <span>
-          {hasBoth ? 'مبدأ و مقصد مشخص شده‌اند' : 'روی نقشه کلیک کنید'}
+          کلیک روی نقشه برای ثبت: <b>{activeMode === 'origin' ? 'مبدأ' : 'مقصد'}</b>
         </span>
       </div>
 
       <MapContainer
-        center={center}
-        zoom={12}
-        className="h-[320px] w-full"
-        scrollWheelZoom
+        center={
+          origin
+            ? [origin.lat, origin.lng]
+            : destination
+            ? [destination.lat, destination.lng]
+            : defaultCenter
+        }
+        zoom={13}
+        className="h-full w-full"
+        zoomControl={false}
       >
+        {/* نقشه پایه روان و سبک CartoDB (سازگار با تم دارک و لایت بدون قطعی) */}
         <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          maxZoom={19}
         />
 
-        <MapClickHandler onLocationSelect={onLocationSelect} />
-        <MapUpdater origin={origin} destination={destination} />
-
-        {origin && (
-          <Marker position={[origin.lat, origin.lng]} icon={originIcon} />
-        )}
-
-        {destination && (
-          <Marker
-            position={[destination.lat, destination.lng]}
-            icon={destinationIcon}
+        {/* لایه ترافیک زنده (Traffic Flow) */}
+        {showTraffic && (
+          <TileLayer
+            attribution="Traffic Data"
+            url={trafficTileUrl}
+            opacity={0.75}
+            zIndex={300}
+            {...(neshanApiKey
+              ? {
+                  headers: {
+                    'Api-Key': neshanApiKey,
+                  },
+                }
+              : {})}
           />
         )}
 
-        {hasBoth && (
+        <MapEvents onSelect={onLocationSelect} />
+        <MapBoundsSync origin={origin} destination={destination} />
+
+        {origin && <Marker position={[origin.lat, origin.lng]} icon={originPin} />}
+        {destination && <Marker position={[destination.lat, destination.lng]} icon={destinationPin} />}
+
+        {origin && destination && (
           <Polyline
-            positions={linePositions}
-            pathOptions={{
-              color: '#fb923c',
-              weight: 4,
-              opacity: 0.95,
-              dashArray: '10 8',
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
+            positions={[
+              [origin.lat, origin.lng],
+              [destination.lat, destination.lng],
+            ]}
+            color="#f97316"
+            weight={4}
+            opacity={0.8}
+            dashArray="6, 8"
           />
         )}
       </MapContainer>
