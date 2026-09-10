@@ -33,6 +33,8 @@ export interface CreateDispatchRequest {
   destinationLongitude: number | null;
 }
 
+export interface UpdateDispatchRequest extends CreateDispatchRequest {}
+
 export interface UpdateDispatchStatusRequest {
   status: DispatchStatus | string;
 }

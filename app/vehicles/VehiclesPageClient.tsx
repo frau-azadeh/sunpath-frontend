@@ -475,10 +475,11 @@ export default function VehiclesPageClient({
     clearDispatchError();
 
     try {
-      // فعلاً API و store فقط createDispatch را دارند.
-      // برای ویرایش واقعی، در مرحله بعد updateDispatch را
-      // به dispatchService و useDispatchStore اضافه می‌کنیم.
-      await createDispatch(data);
+      if (selectedDispatch) {
+        await dispatchService.update(selectedDispatch.id, data);
+      } else {
+        await createDispatch(data);
+      }
 
       await fetchDispatches();
 

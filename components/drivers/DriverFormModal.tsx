@@ -11,6 +11,7 @@ import {
   Phone,
   Save,
   User,
+  KeyRound,
   X,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -44,6 +45,8 @@ const getDefaultValues = (initialData?: Driver | null): DriverFormInput => ({
   nationalId: initialData?.nationalId ?? '',
   phone: initialData?.phone ?? '',
   licenseType: initialData?.licenseType ?? 1,
+  username: initialData?.username ?? '',
+  password: '',
 });
 
 const inputClassName = `
@@ -88,6 +91,7 @@ export const DriverFormModal = ({
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isValid },
   } = useForm<DriverFormInput, unknown, DriverFormValues>({
     resolver: zodResolver(driverFormSchema),
@@ -107,12 +111,15 @@ export const DriverFormModal = ({
   }, [initialData, isOpen, reset]);
 
   const handleFormSubmit = async (data: DriverFormValues) => {
+    if (!initialData && (!data.password || data.password.length < 6)) { setError('password', { type: 'manual', message: 'رمز عبور حداقل ۶ کاراکتر باشد.' }); return; }
     const request: CreateDriverRequest = {
       firstName: data.firstName,
       lastName: data.lastName,
       nationalId: data.nationalId,
       phone: data.phone,
       licenseType: data.licenseType,
+      username: data.username,
+      password: data.password || '',
     };
 
     await onSubmit(request);
@@ -365,6 +372,32 @@ export const DriverFormModal = ({
                   <option value={3}>پایه ۳</option>
                 </select>
               </FormField>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField id="username" label="نام کاربری" icon={<User size={15} />} error={errors.username?.message}>
+                  <input
+                    id="username"
+                    type="text"
+                    autoComplete="username"
+                    disabled={isSubmitting}
+                    placeholder="مثلاً: ali.driver"
+                    className={`${inputClassName} ${errors.username ? errorInputClassName : normalInputClassName}`}
+                    {...register('username')}
+                  />
+                </FormField>
+
+                <FormField id="password" label={initialData ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور'} icon={<KeyRound size={15} />} error={errors.password?.message}>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete={initialData ? 'new-password' : 'new-password'}
+                    disabled={isSubmitting}
+                    placeholder={initialData ? 'در صورت تغییر وارد کنید' : 'حداقل ۶ کاراکتر'}
+                    className={`${inputClassName} ${errors.password ? errorInputClassName : normalInputClassName}`}
+                    {...register('password')}
+                  />
+                </FormField>
+              </div>
 
               {/* Actions */}
               <div

@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Compass, Gauge, Navigation, Play, Square, X } from 'lucide-react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { Compass, Gauge, MapPin, Navigation, X } from 'lucide-react';
+import { MapContainer, Polyline, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
 
 import { signalRService } from '@/services/signalrService';
 import { useVehicleStore } from '@/store/useVehicleStore';
@@ -20,6 +20,16 @@ if (typeof window !== 'undefined') {
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
+
+// آیکون قرمز مخصوص مقصد Dispatch
+const destinationIcon = typeof window !== 'undefined' ? new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+}) : undefined;
 
 const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
 
@@ -64,51 +74,18 @@ export default function LiveMap() {
     (state) => state.setSelectedVehicleId,
   );
   const loadVehicles = useVehicleStore((state) => state.loadVehicles);
-  const updateVehiclePosition = useVehicleStore(
-    (state) => state.updateVehiclePosition,
-  );
 
   const [filter, setFilter] = useState<VehicleFilter>('all');
-  const [isLocalSimulating, setIsLocalSimulating] = useState(false);
-
-  const vehiclesRef = useRef(vehicles);
-
-  useEffect(() => {
-    vehiclesRef.current = vehicles;
-  }, [vehicles]);
 
   useEffect(() => {
     void loadVehicles();
     void signalRService.startConnection();
   }, [loadVehicles]);
 
-  useEffect(() => {
-    if (!isLocalSimulating) return;
-
-    const intervalId = window.setInterval(() => {
-      vehiclesRef.current.forEach((vehicle) => {
-        const lat = Number(vehicle.latitude);
-        const lng = Number(vehicle.longitude);
-        const heading = Number(vehicle.heading ?? 0);
-
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-        const newLat = lat + (Math.random() - 0.5) * 0.0005;
-        const newLng = lng + (Math.random() - 0.5) * 0.0005;
-        const newSpeed = Math.floor(Math.random() * 60) + 20;
-        const newHeading = (heading + 10) % 360;
-
-        updateVehiclePosition(vehicle.id, newLat, newLng, newSpeed, newHeading);
-      });
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [isLocalSimulating, updateVehiclePosition]);
-
   const validVehicles = useMemo(() => {
     return vehicles.filter((vehicle) => {
-      const lat = Number(vehicle.latitude);
-      const lng = Number(vehicle.longitude);
+      const lat = Number(vehicle.latitude ?? vehicle.lastLatitude);
+      const lng = Number(vehicle.longitude ?? vehicle.lastLongitude);
       const speed = Number(vehicle.speed ?? 0);
 
       if (
@@ -126,14 +103,50 @@ export default function LiveMap() {
     });
   }, [vehicles, filter]);
 
-  const selectedVehicle =
-    vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
+  const selectedVehicle = useMemo(
+    () => vehicles.find((vehicle) => String(vehicle.id) === String(selectedVehicleId)) ?? null,
+    [vehicles, selectedVehicleId],
+  );
 
-  const selectedLat = selectedVehicle ? Number(selectedVehicle.latitude) : null;
+  const selectedLat = selectedVehicle
+    ? Number(selectedVehicle.latitude ?? selectedVehicle.lastLatitude)
+    : null;
 
   const selectedLng = selectedVehicle
-    ? Number(selectedVehicle.longitude)
+    ? Number(selectedVehicle.longitude ?? selectedVehicle.lastLongitude)
     : null;
+
+  // محاسبه مسیر حرکت به مقصد (وقتی ماشین انتخاب شده یا مقصد مشخص داره)
+  const activeRoutes = useMemo(() => {
+    return vehicles
+      .map((v) => {
+        const currentLat = Number(v.latitude ?? v.lastLatitude);
+        const currentLng = Number(v.longitude ?? v.lastLongitude);
+        const destLat = Number(v.destinationLat);
+        const destLng = Number(v.destinationLng);
+
+        if (
+          Number.isFinite(currentLat) &&
+          Number.isFinite(currentLng) &&
+          Number.isFinite(destLat) &&
+          Number.isFinite(destLng) &&
+          destLat !== 0 &&
+          destLng !== 0
+        ) {
+          return {
+            id: v.id,
+            positions: [
+              [currentLat, currentLng] as [number, number],
+              [destLat, destLng] as [number, number],
+            ],
+            destination: [destLat, destLng] as [number, number],
+            destinationAddress: v.destinationAddress || 'مقصد Dispatch',
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [vehicles]);
 
   return (
     <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
@@ -161,11 +174,34 @@ export default function LiveMap() {
 
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+          {/* ۱. نمایش خطوط مسیر Dispatch به مقصد */}
+          {activeRoutes.map(
+            (route) =>
+              route && (
+                <div key={`route-${route.id}`}>
+                  <Polyline
+                    positions={route.positions}
+                    pathOptions={{
+                      color: '#6366f1',
+                      weight: 4,
+                      dashArray: '8, 8',
+                      opacity: 0.8,
+                    }}
+                  />
+                  <Marker position={route.destination} icon={destinationIcon}>
+                    <Popup>{route.destinationAddress}</Popup>
+                  </Marker>
+                </div>
+              ),
+          )}
+
+          {/* ۲. نمایش مارکر واقعی خودروها */}
           {validVehicles.map((vehicle) => (
             <VehicleMarker key={vehicle.id} vehicle={vehicle} />
           ))}
         </MapContainer>
 
+        {/* فیلتر خودروها */}
         <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2 rounded-xl bg-white/90 p-3 shadow-sm backdrop-blur dark:bg-neutral-900/90">
           <div className="flex gap-1">
             {(['all', 'moving', 'stopped'] as const).map((item) => (
@@ -183,30 +219,16 @@ export default function LiveMap() {
               </button>
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsLocalSimulating((current) => !current)}
-            className={`flex items-center justify-center gap-2 rounded-lg py-2 text-[10px] font-bold text-white transition-all ${
-              isLocalSimulating ? 'animate-pulse bg-rose-500' : 'bg-indigo-600'
-            }`}
-          >
-            {isLocalSimulating ? (
-              <Square size={12} fill="currentColor" />
-            ) : (
-              <Play size={12} fill="currentColor" />
-            )}
-            {isLocalSimulating ? 'توقف تست' : 'شبیه‌ساز تست'}
-          </button>
         </div>
       </div>
 
+      {/* پنل جزئیات خودروی انتخاب‌شده */}
       {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-72 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/95">
+        <div className="absolute bottom-4 left-4 z-[1000] w-80 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/95">
           <div className="mb-2 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
             <h3 className="flex items-center gap-2 text-sm font-bold">
-              <Navigation className="h-3 w-3 text-orange-500" />
-              خودرو {selectedVehicle.id}
+              <Navigation className="h-4 w-4 text-indigo-600" />
+              خودرو {selectedVehicle.plateNumber || selectedVehicle.id}
             </h3>
 
             <button
@@ -219,17 +241,27 @@ export default function LiveMap() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-[10px]">
+          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
             <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
-              <Gauge size={12} className="text-orange-500" />
+              <Gauge size={14} className="text-indigo-500" />
               {Number(selectedVehicle.speed ?? 0)} km/h
             </div>
 
             <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
-              <Compass size={12} className="text-orange-500" />
-              {Number(selectedVehicle.heading ?? 0)}°
+              <Compass size={14} className="text-indigo-500" />
+              {Math.round(Number(selectedVehicle.heading ?? 0))}°
             </div>
           </div>
+
+          {selectedVehicle.destinationAddress && (
+            <div className="flex items-start gap-2 rounded-lg bg-neutral-100 p-2 text-xs dark:bg-neutral-800">
+              <MapPin size={14} className="mt-0.5 text-rose-500 shrink-0" />
+              <div>
+                <span className="font-semibold block text-[10px] text-neutral-500">مقصد:</span>
+                <span className="text-neutral-700 dark:text-neutral-200">{selectedVehicle.destinationAddress}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
