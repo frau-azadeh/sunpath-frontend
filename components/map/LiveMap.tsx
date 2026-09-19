@@ -1,39 +1,245 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Compass, Gauge, MapPin, Navigation, X } from 'lucide-react';
-import { MapContainer, Polyline, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
+
+import {
+  Compass,
+  Gauge,
+  MapPin,
+  Navigation,
+  X,
+} from 'lucide-react';
+
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from 'react-leaflet';
 
 import { signalRService } from '@/services/signalrService';
+import { useDispatchStore } from '@/store/dispatch-store';
 import { useVehicleStore } from '@/store/useVehicleStore';
 
+import type { Dispatch } from '@/types/dispatch';
+import type { Vehicle } from '@/types/fleet';
+
 import VehicleMarker from './VehicleMarker';
+
+const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
+
+type VehicleFilter = 'all' | 'moving' | 'stopped';
+
+interface MissionMapItem {
+  mission: Dispatch;
+
+  vehicle: Vehicle | null;
+
+  vehiclePosition: [number, number] | null;
+
+  origin: [number, number] | null;
+
+  destination: [number, number] | null;
+}
+
+/* =========================================================
+   Leaflet
+========================================================= */
 
 if (typeof window !== 'undefined') {
   L.Icon.Default.mergeOptions({
     iconRetinaUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+
+    iconUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+
+    shadowUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
 
-// آیکون قرمز مخصوص مقصد Dispatch
-const destinationIcon = typeof window !== 'undefined' ? new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-}) : undefined;
+/* =========================================================
+   Helpers
+========================================================= */
 
-const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
-type VehicleFilter = 'all' | 'moving' | 'stopped';
+function getPosition(
+  latitude: unknown,
+  longitude: unknown,
+): [number, number] | null {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat === 0 ||
+    lng === 0
+  ) {
+    return null;
+  }
+
+  return [lat, lng];
+}
+
+function getVehiclePosition(vehicle: Vehicle): [number, number] | null {
+  return getPosition(
+    vehicle.latitude ?? vehicle.lastLatitude,
+    vehicle.longitude ?? vehicle.lastLongitude,
+  );
+}
+
+function isActiveDispatch(dispatch: Dispatch): boolean {
+  const status = String(dispatch.status ?? '')
+    .trim()
+    .replace(/[\s_-]/g, '')
+    .toLowerCase();
+
+  // Backend:
+  // Assigned = 1
+  // Started = 2
+  // Completed = 3
+  // Cancelled = 4
+
+  return (
+    status === '1' ||
+    status === '2' ||
+    status === 'assigned' ||
+    status === 'started' ||
+    status === 'inprogress'
+  );
+}
+
+function getVehicleLabel(
+  vehicle: Vehicle | null,
+  mission: Dispatch,
+): string {
+  if (vehicle?.plateNumber) {
+    return vehicle.plateNumber;
+  }
+
+  return `خودرو ${mission.vehicleId}`;
+}
+
+/* =========================================================
+   Mission Icon
+========================================================= */
+
+function createMissionIcon(
+  type: 'origin' | 'destination',
+  plateNumber: string,
+  missionId: number | string,
+) {
+  const isOrigin = type === 'origin';
+
+  const color = isOrigin ? '#059669' : '#e11d48';
+
+  const title = isOrigin ? '● مبدأ' : '⚑ مقصد';
+
+  return L.divIcon({
+    className: 'sunpath-mission-marker',
+
+    html: `
+      <div
+        style="
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          transform:translate(-50%,-100%);
+          white-space:nowrap;
+          pointer-events:auto;
+        "
+      >
+        <div
+          style="
+            min-width:100px;
+            padding:7px 10px;
+            border-radius:10px;
+            background:${color};
+            color:white;
+            border:2px solid white;
+            box-shadow:0 4px 14px rgba(0,0,0,.30);
+            text-align:center;
+            direction:rtl;
+            font-family:Vazirmatn,Tahoma,sans-serif;
+          "
+        >
+          <div
+            style="
+              font-size:11px;
+              font-weight:800;
+            "
+          >
+            ${title}
+          </div>
+
+          <div
+            style="
+              margin-top:3px;
+              font-size:9px;
+              font-weight:700;
+            "
+          >
+            ${escapeHtml(plateNumber)}
+          </div>
+
+          <div
+            style="
+              margin-top:1px;
+              font-size:8px;
+              opacity:.85;
+            "
+          >
+            مأموریت #${escapeHtml(missionId)}
+          </div>
+        </div>
+
+        <div
+          style="
+            width:0;
+            height:0;
+            border-left:7px solid transparent;
+            border-right:7px solid transparent;
+            border-top:9px solid ${color};
+          "
+        ></div>
+
+        <div
+          style="
+            width:11px;
+            height:11px;
+            margin-top:-1px;
+            border-radius:50%;
+            background:${color};
+            border:2px solid white;
+            box-shadow:0 2px 5px rgba(0,0,0,.3);
+          "
+        ></div>
+      </div>
+    `,
+
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+}
+
+/* =========================================================
+   Map helpers
+========================================================= */
 
 function MapResizeHandler() {
   const map = useMap();
@@ -43,225 +249,456 @@ function MapResizeHandler() {
       map.invalidateSize();
     }, 200);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [map]);
 
   return null;
 }
 
 function MapViewController({
-  selectedLat,
-  selectedLng,
+  position,
 }: {
-  selectedLat: number | null;
-  selectedLng: number | null;
+  position: [number, number] | null;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedLat === null || selectedLng === null) return;
+    if (!position) {
+      return;
+    }
 
-    map.setView([selectedLat, selectedLng], 15, { animate: true });
-  }, [selectedLat, selectedLng, map]);
+    map.setView(position, 15, {
+      animate: true,
+    });
+  }, [map, position?.[0], position?.[1]]);
 
   return null;
 }
 
+/* =========================================================
+   Main
+========================================================= */
+
 export default function LiveMap() {
+  /* =======================================================
+     Vehicles
+  ======================================================= */
+
   const vehicles = useVehicleStore((state) => state.vehicles);
-  const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
+
+  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+
+  const selectedVehicleId = useVehicleStore(
+    (state) => state.selectedVehicleId,
+  );
+
   const setSelectedVehicleId = useVehicleStore(
     (state) => state.setSelectedVehicleId,
   );
-  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+
+  /* =======================================================
+     Dispatches
+
+     مهم:
+     همان Store صفحه تخصیص مأموریت
+  ======================================================= */
+
+  const dispatches = useDispatchStore((state) => state.dispatches);
+
+  const fetchDispatches = useDispatchStore(
+    (state) => state.fetchDispatches,
+  );
+
+  /* =======================================================
+     UI
+  ======================================================= */
 
   const [filter, setFilter] = useState<VehicleFilter>('all');
 
+  /* =======================================================
+     Initial Load
+  ======================================================= */
+
   useEffect(() => {
-    void loadVehicles();
-    void signalRService.startConnection();
-  }, [loadVehicles]);
+    void Promise.allSettled([
+      loadVehicles(),
+      fetchDispatches(),
+    ]);
 
-  const validVehicles = useMemo(() => {
-    return vehicles.filter((vehicle) => {
-      const lat = Number(vehicle.latitude ?? vehicle.lastLatitude);
-      const lng = Number(vehicle.longitude ?? vehicle.lastLongitude);
-      const speed = Number(vehicle.speed ?? 0);
+    void signalRService.startConnection().catch((error) => {
+      console.error('[LiveMap] SignalR:', error);
+    });
+  }, [loadVehicles, fetchDispatches]);
 
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng) ||
-        lat === 0 ||
-        lng === 0
-      ) {
+  /* =======================================================
+     Dispatch + Vehicle JOIN
+  ======================================================= */
+
+  const missionItems = useMemo<MissionMapItem[]>(() => {
+    const activeDispatches = dispatches.filter(isActiveDispatch);
+
+    return activeDispatches.map((mission) => {
+      const vehicle =
+        vehicles.find(
+          (item) =>
+            String(item.id) === String(mission.vehicleId),
+        ) ?? null;
+
+      const vehiclePosition = vehicle
+        ? getVehiclePosition(vehicle)
+        : null;
+
+      const origin = getPosition(
+        mission.originLatitude,
+        mission.originLongitude,
+      );
+
+      const destination = getPosition(
+        mission.destinationLatitude,
+        mission.destinationLongitude,
+      );
+
+      return {
+        mission,
+        vehicle,
+        vehiclePosition,
+        origin,
+        destination,
+      };
+    });
+  }, [dispatches, vehicles]);
+
+  /* =======================================================
+     Filter
+
+     توجه:
+     Filter فقط Vehicle Marker را فیلتر می‌کند.
+     Mission از نقشه حذف نمی‌شود.
+  ======================================================= */
+
+  const visibleVehicleItems = useMemo(() => {
+    return missionItems.filter((item) => {
+      if (!item.vehicle || !item.vehiclePosition) {
         return false;
       }
 
-      if (filter === 'moving') return speed > 0;
-      if (filter === 'stopped') return speed === 0;
+      const speed = Number(item.vehicle.speed ?? 0);
+
+      if (filter === 'moving') {
+        return speed > 0;
+      }
+
+      if (filter === 'stopped') {
+        return speed <= 0;
+      }
+
       return true;
     });
-  }, [vehicles, filter]);
+  }, [missionItems, filter]);
 
-  const selectedVehicle = useMemo(
-    () => vehicles.find((vehicle) => String(vehicle.id) === String(selectedVehicleId)) ?? null,
-    [vehicles, selectedVehicleId],
-  );
+  /* =======================================================
+     Selected Vehicle
+  ======================================================= */
 
-  const selectedLat = selectedVehicle
-    ? Number(selectedVehicle.latitude ?? selectedVehicle.lastLatitude)
-    : null;
+  const selectedItem = useMemo(() => {
+    if (selectedVehicleId == null) {
+      return null;
+    }
 
-  const selectedLng = selectedVehicle
-    ? Number(selectedVehicle.longitude ?? selectedVehicle.lastLongitude)
-    : null;
+    return (
+      missionItems.find(
+        (item) =>
+          item.vehicle &&
+          String(item.vehicle.id) ===
+            String(selectedVehicleId),
+      ) ?? null
+    );
+  }, [missionItems, selectedVehicleId]);
 
-  // محاسبه مسیر حرکت به مقصد (وقتی ماشین انتخاب شده یا مقصد مشخص داره)
-  const activeRoutes = useMemo(() => {
-    return vehicles
-      .map((v) => {
-        const currentLat = Number(v.latitude ?? v.lastLatitude);
-        const currentLng = Number(v.longitude ?? v.lastLongitude);
-        const destLat = Number(v.destinationLat);
-        const destLng = Number(v.destinationLng);
+  const selectedPosition =
+    selectedItem?.vehiclePosition ??
+    selectedItem?.origin ??
+    selectedItem?.destination ??
+    null;
 
-        if (
-          Number.isFinite(currentLat) &&
-          Number.isFinite(currentLng) &&
-          Number.isFinite(destLat) &&
-          Number.isFinite(destLng) &&
-          destLat !== 0 &&
-          destLng !== 0
-        ) {
-          return {
-            id: v.id,
-            positions: [
-              [currentLat, currentLng] as [number, number],
-              [destLat, destLng] as [number, number],
-            ],
-            destination: [destLat, destLng] as [number, number],
-            destinationAddress: v.destinationAddress || 'مقصد Dispatch',
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
-  }, [vehicles]);
+  /* =======================================================
+     Render
+  ======================================================= */
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="relative h-full w-full">
-        <MapContainer
-          center={TEHRAN_CENTER}
-          zoom={12}
-          className="z-0 h-full w-full"
-          style={{ height: '100%', width: '100%' }}
-        >
-          <MapResizeHandler />
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100">
+      <MapContainer
+        center={TEHRAN_CENTER}
+        zoom={12}
+        className="z-0 h-full w-full"
+        style={{
+          height: '100%',
+          width: '100%',
+        }}
+      >
+        <MapResizeHandler />
 
-          <MapViewController
-            selectedLat={
-              selectedLat !== null && Number.isFinite(selectedLat)
-                ? selectedLat
-                : null
-            }
-            selectedLng={
-              selectedLng !== null && Number.isFinite(selectedLng)
-                ? selectedLng
-                : null
-            }
-          />
+        <MapViewController position={selectedPosition} />
 
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
 
-          {/* ۱. نمایش خطوط مسیر Dispatch به مقصد */}
-          {activeRoutes.map(
-            (route) =>
-              route && (
-                <div key={`route-${route.id}`}>
-                  <Polyline
-                    positions={route.positions}
-                    pathOptions={{
-                      color: '#6366f1',
-                      weight: 4,
-                      dashArray: '8, 8',
-                      opacity: 0.8,
-                    }}
-                  />
-                  <Marker position={route.destination} icon={destinationIcon}>
-                    <Popup>{route.destinationAddress}</Popup>
-                  </Marker>
-                </div>
-              ),
-          )}
+        {/* =================================================
+            تمام مأموریت‌های فعال
+        ================================================= */}
 
-          {/* ۲. نمایش مارکر واقعی خودروها */}
-          {validVehicles.map((vehicle) => (
-            <VehicleMarker key={vehicle.id} vehicle={vehicle} />
-          ))}
-        </MapContainer>
+        {missionItems.map((item) => {
+          const {
+            mission,
+            vehicle,
+            origin,
+            destination,
+          } = item;
 
-        {/* فیلتر خودروها */}
-        <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2 rounded-xl bg-white/90 p-3 shadow-sm backdrop-blur dark:bg-neutral-900/90">
-          <div className="flex gap-1">
-            {(['all', 'moving', 'stopped'] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setFilter(item)}
-                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
-                  filter === item
-                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
-                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
-                }`}
-              >
-                {item === 'all' ? 'همه' : item === 'moving' ? 'متحرک' : 'متوقف'}
-              </button>
-            ))}
-          </div>
-        </div>
+          const plate = getVehicleLabel(vehicle, mission);
+
+          return (
+            <Fragment key={`mission-${mission.id}`}>
+              {/* Route */}
+
+              {origin && destination && (
+                <Polyline
+                  positions={[origin, destination]}
+                  pathOptions={{
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '10 8',
+                  }}
+                />
+              )}
+
+              {/* Origin */}
+
+              {origin && (
+                <Marker
+                  position={origin}
+                  icon={createMissionIcon(
+                    'origin',
+                    plate,
+                    mission.id,
+                  )}
+                  zIndexOffset={800}
+                >
+                  <Popup>
+                    <div
+                      dir="rtl"
+                      className="min-w-[180px] text-right text-xs"
+                    >
+                      <strong className="mb-1 block text-emerald-600">
+                        مبدأ مأموریت
+                      </strong>
+
+                      <div>
+                        {mission.originTitle || 'مبدأ مأموریت'}
+                      </div>
+
+                      <div className="mt-2 text-neutral-500">
+                        {plate}
+                      </div>
+
+                      <div className="text-neutral-400">
+                        مأموریت #{mission.id}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+
+              {/* Destination */}
+
+              {destination && (
+                <Marker
+                  position={destination}
+                  icon={createMissionIcon(
+                    'destination',
+                    plate,
+                    mission.id,
+                  )}
+                  zIndexOffset={800}
+                >
+                  <Popup>
+                    <div
+                      dir="rtl"
+                      className="min-w-[180px] text-right text-xs"
+                    >
+                      <strong className="mb-1 block text-rose-600">
+                        مقصد مأموریت
+                      </strong>
+
+                      <div>
+                        {mission.destinationTitle || 'مقصد مأموریت'}
+                      </div>
+
+                      <div className="mt-2 text-neutral-500">
+                        {plate}
+                      </div>
+
+                      <div className="text-neutral-400">
+                        مأموریت #{mission.id}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+            </Fragment>
+          );
+        })}
+
+        {/* =================================================
+            Vehicle Markers
+        ================================================= */}
+
+        {visibleVehicleItems.map((item) => {
+          if (!item.vehicle) {
+            return null;
+          }
+
+          return (
+            <VehicleMarker
+              key={`vehicle-${item.vehicle.id}`}
+              vehicle={item.vehicle}
+            />
+          );
+        })}
+      </MapContainer>
+
+      {/* =================================================
+          تعداد واقعی مأموریت‌های فعال
+      ================================================= */}
+
+      <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs shadow">
+        مأموریت فعال:{' '}
+        <strong>{missionItems.length}</strong>
       </div>
 
-      {/* پنل جزئیات خودروی انتخاب‌شده */}
-      {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-80 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/95">
-          <div className="mb-2 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
-            <h3 className="flex items-center gap-2 text-sm font-bold">
-              <Navigation className="h-4 w-4 text-indigo-600" />
-              خودرو {selectedVehicle.plateNumber || selectedVehicle.id}
-            </h3>
+      {/* =================================================
+          Filter
+      ================================================= */}
+
+      <div className="absolute right-4 top-4 z-[1000] flex gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1 shadow">
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={`rounded-lg px-3 py-1.5 text-xs ${
+            filter === 'all'
+              ? 'bg-neutral-900 text-white'
+              : 'text-neutral-600'
+          }`}
+        >
+          همه
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter('moving')}
+          className={`rounded-lg px-3 py-1.5 text-xs ${
+            filter === 'moving'
+              ? 'bg-neutral-900 text-white'
+              : 'text-neutral-600'
+          }`}
+        >
+          متحرک
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter('stopped')}
+          className={`rounded-lg px-3 py-1.5 text-xs ${
+            filter === 'stopped'
+              ? 'bg-neutral-900 text-white'
+              : 'text-neutral-600'
+          }`}
+        >
+          متوقف
+        </button>
+      </div>
+
+      {/* =================================================
+          Selected
+      ================================================= */}
+
+      {selectedItem?.vehicle && (
+        <div className="absolute bottom-4 left-4 z-[1000] w-80 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl">
+          <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-2">
+            <div className="flex items-center gap-2">
+              <Navigation
+                size={16}
+                className="text-orange-500"
+              />
+
+              <strong className="text-sm">
+                {selectedItem.vehicle.plateNumber ||
+                  `خودرو ${selectedItem.vehicle.id}`}
+              </strong>
+            </div>
 
             <button
               type="button"
               onClick={() => setSelectedVehicleId(null)}
-              className="text-neutral-400 transition-colors hover:text-neutral-600 dark:hover:text-neutral-200"
-              aria-label="بستن"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
-              <Gauge size={14} className="text-indigo-500" />
-              {Number(selectedVehicle.speed ?? 0)} km/h
+          <div className="mb-3 rounded-lg bg-blue-50 p-2 text-center text-xs font-bold text-blue-700">
+            مأموریت #{selectedItem.mission.id}
+          </div>
+
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
+              <Gauge
+                size={14}
+                className="text-orange-500"
+              />
+
+              {Number(selectedItem.vehicle.speed ?? 0)} km/h
             </div>
 
-            <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
-              <Compass size={14} className="text-indigo-500" />
-              {Math.round(Number(selectedVehicle.heading ?? 0))}°
+            <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
+              <Compass
+                size={14}
+                className="text-orange-500"
+              />
+
+              {Math.round(
+                Number(selectedItem.vehicle.heading ?? 0),
+              )}
+              °
             </div>
           </div>
 
-          {selectedVehicle.destinationAddress && (
-            <div className="flex items-start gap-2 rounded-lg bg-neutral-100 p-2 text-xs dark:bg-neutral-800">
-              <MapPin size={14} className="mt-0.5 text-rose-500 shrink-0" />
-              <div>
-                <span className="font-semibold block text-[10px] text-neutral-500">مقصد:</span>
-                <span className="text-neutral-700 dark:text-neutral-200">{selectedVehicle.destinationAddress}</span>
-              </div>
+          <div className="mb-2 rounded-lg bg-emerald-50 p-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
+              <MapPin size={14} />
+              مبدأ
             </div>
-          )}
+
+            <div className="mt-1 text-xs text-neutral-700">
+              {selectedItem.mission.originTitle ||
+                'مبدأ مأموریت'}
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-rose-50 p-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-rose-700">
+              <MapPin size={14} />
+              مقصد
+            </div>
+
+            <div className="mt-1 text-xs text-neutral-700">
+              {selectedItem.mission.destinationTitle ||
+                'مقصد مأموریت'}
+            </div>
+          </div>
         </div>
       )}
     </div>
