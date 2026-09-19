@@ -1,13 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import {
-  CreditCard,
-  Pencil,
-  Phone,
-  Trash2,
-  UserRound,
-} from 'lucide-react';
+import { CreditCard, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
 
 import type { Driver } from '@/types/driver';
 
@@ -23,12 +17,8 @@ interface DriverTableRowProps {
 
 function toEnglishDigits(value: unknown): string {
   return String(value ?? '')
-    .replace(/[۰-۹]/g, (digit) =>
-      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
-    );
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
 }
 
 function toPersianDigits(value: unknown): string {
@@ -128,8 +118,7 @@ export function DriverTableRow({
   const firstName = String(driver.firstName ?? '').trim();
   const lastName = String(driver.lastName ?? '').trim();
 
-  const fullName =
-    `${firstName} ${lastName}`.trim() || 'راننده بدون نام';
+  const fullName = `${firstName} ${lastName}`.trim() || 'راننده بدون نام';
 
   const initial = getDriverInitial(driver);
 
@@ -179,9 +168,7 @@ export function DriverTableRow({
             <div className="mt-1 flex items-center gap-1 text-[11px] text-neutral-400 dark:text-neutral-500">
               <UserRound size={12} />
 
-              <span>
-                راننده
-              </span>
+              <span>راننده</span>
             </div>
           </div>
         </div>
@@ -253,9 +240,7 @@ export function DriverTableRow({
         <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
 
-          <span>
-            پایه {toPersianDigits(driver.licenseType)}
-          </span>
+          <span>پایه {toPersianDigits(driver.licenseType)}</span>
         </div>
       </td>
 

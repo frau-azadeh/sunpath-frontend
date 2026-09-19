@@ -32,9 +32,7 @@ import type {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (
-    data: CreateDriverRequest | UpdateDriverRequest,
-  ) => Promise<void>;
+  onSubmit: (data: CreateDriverRequest | UpdateDriverRequest) => Promise<void>;
   initialData?: Driver | null;
   isSubmitting: boolean;
 }
@@ -47,9 +45,7 @@ interface FormFieldProps {
   children: ReactNode;
 }
 
-const getDefaultValues = (
-  initialData?: Driver | null,
-): DriverFormInput => ({
+const getDefaultValues = (initialData?: Driver | null): DriverFormInput => ({
   firstName: initialData?.firstName ?? '',
   lastName: initialData?.lastName ?? '',
   nationalId: initialData?.nationalId ?? '',
@@ -92,12 +88,8 @@ const errorInputClassName = `
 
 function normalizeDigits(value: string): string {
   return value
-    .replace(/[۰-۹]/g, (digit) =>
-      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
-    )
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
     .replace(/\D/g, '');
 }
 
@@ -144,9 +136,7 @@ export const DriverFormModal = ({
     onClose();
   };
 
-  const handleFormSubmit = async (
-    data: DriverFormValues,
-  ): Promise<void> => {
+  const handleFormSubmit = async (data: DriverFormValues): Promise<void> => {
     const password = String(data.password ?? '').trim();
 
     const commonData = {
@@ -290,9 +280,7 @@ export const DriverFormModal = ({
                     id="driver-form-title"
                     className="truncate text-xl font-bold text-neutral-900 dark:text-white"
                   >
-                    {isEditMode
-                      ? 'ویرایش اطلاعات راننده'
-                      : 'ثبت راننده جدید'}
+                    {isEditMode ? 'ویرایش اطلاعات راننده' : 'ثبت راننده جدید'}
                   </h2>
 
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
@@ -340,9 +328,7 @@ export const DriverFormModal = ({
                     placeholder="مثلاً: علی"
                     aria-invalid={Boolean(errors.firstName)}
                     aria-describedby={
-                      errors.firstName
-                        ? 'firstName-error'
-                        : undefined
+                      errors.firstName ? 'firstName-error' : undefined
                     }
                     className={`${inputClassName} ${
                       errors.firstName
@@ -367,9 +353,7 @@ export const DriverFormModal = ({
                     placeholder="مثلاً: محمدی"
                     aria-invalid={Boolean(errors.lastName)}
                     aria-describedby={
-                      errors.lastName
-                        ? 'lastName-error'
-                        : undefined
+                      errors.lastName ? 'lastName-error' : undefined
                     }
                     className={`${inputClassName} ${
                       errors.lastName
@@ -398,9 +382,7 @@ export const DriverFormModal = ({
                   placeholder="0012345678"
                   aria-invalid={Boolean(errors.nationalId)}
                   aria-describedby={
-                    errors.nationalId
-                      ? 'nationalId-error'
-                      : undefined
+                    errors.nationalId ? 'nationalId-error' : undefined
                   }
                   className={`${inputClassName} text-left tabular-nums ${
                     errors.nationalId
@@ -427,13 +409,9 @@ export const DriverFormModal = ({
                   disabled={isSubmitting}
                   placeholder="09121234567"
                   aria-invalid={Boolean(errors.phone)}
-                  aria-describedby={
-                    errors.phone ? 'phone-error' : undefined
-                  }
+                  aria-describedby={errors.phone ? 'phone-error' : undefined}
                   className={`${inputClassName} text-left tabular-nums ${
-                    errors.phone
-                      ? errorInputClassName
-                      : normalInputClassName
+                    errors.phone ? errorInputClassName : normalInputClassName
                   }`}
                   {...register('phone')}
                 />
@@ -450,9 +428,7 @@ export const DriverFormModal = ({
                   disabled={isSubmitting}
                   aria-invalid={Boolean(errors.licenseType)}
                   aria-describedby={
-                    errors.licenseType
-                      ? 'licenseType-error'
-                      : undefined
+                    errors.licenseType ? 'licenseType-error' : undefined
                   }
                   className={`${inputClassName} cursor-pointer ${
                     errors.licenseType
@@ -484,9 +460,7 @@ export const DriverFormModal = ({
                     placeholder="مثلاً: ali.driver"
                     aria-invalid={Boolean(errors.username)}
                     aria-describedby={
-                      errors.username
-                        ? 'username-error'
-                        : undefined
+                      errors.username ? 'username-error' : undefined
                     }
                     className={`${inputClassName} ${
                       errors.username
@@ -499,11 +473,7 @@ export const DriverFormModal = ({
 
                 <FormField
                   id="password"
-                  label={
-                    isEditMode
-                      ? 'رمز عبور جدید (اختیاری)'
-                      : 'رمز عبور'
-                  }
+                  label={isEditMode ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور'}
                   icon={<KeyRound size={15} />}
                   error={errors.password?.message}
                 >
@@ -520,9 +490,7 @@ export const DriverFormModal = ({
                       }
                       aria-invalid={Boolean(errors.password)}
                       aria-describedby={
-                        errors.password
-                          ? 'password-error'
-                          : undefined
+                        errors.password ? 'password-error' : undefined
                       }
                       className={`${inputClassName} pl-11 ${
                         errors.password
@@ -534,14 +502,10 @@ export const DriverFormModal = ({
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword((current) => !current)
-                      }
+                      onClick={() => setShowPassword((current) => !current)}
                       disabled={isSubmitting}
                       aria-label={
-                        showPassword
-                          ? 'مخفی کردن رمز عبور'
-                          : 'نمایش رمز عبور'
+                        showPassword ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'
                       }
                       className="
                         absolute left-3 top-1/2 flex h-8 w-8
@@ -553,18 +517,14 @@ export const DriverFormModal = ({
                         dark:hover:bg-orange-950/40
                       "
                     >
-                      {showPassword ? (
-                        <EyeOff size={17} />
-                      ) : (
-                        <Eye size={17} />
-                      )}
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
                   </div>
 
                   {isEditMode && !errors.password && (
                     <p className="mt-1 text-[11px] leading-5 text-neutral-400 dark:text-neutral-500">
-                      اگر قصد تغییر رمز عبور را ندارید، این قسمت
-                      را خالی بگذارید.
+                      اگر قصد تغییر رمز عبور را ندارید، این قسمت را خالی
+                      بگذارید.
                     </p>
                   )}
                 </FormField>
@@ -641,13 +601,7 @@ export const DriverFormModal = ({
   );
 };
 
-const FormField = ({
-  id,
-  label,
-  error,
-  icon,
-  children,
-}: FormFieldProps) => (
+const FormField = ({ id, label, error, icon, children }: FormFieldProps) => (
   <div className="space-y-1.5">
     <label
       htmlFor={id}

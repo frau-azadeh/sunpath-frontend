@@ -1,14 +1,7 @@
 export type DriverDispatchStatus =
-  | 'Assigned'
-  | 'Started'
-  | 'Completed'
-  | 'Cancelled';
+  'Assigned' | 'Started' | 'Completed' | 'Cancelled';
 
-export type DriverPageTab =
-  | 'dispatch'
-  | 'route'
-  | 'history'
-  | 'profile';
+export type DriverPageTab = 'dispatch' | 'route' | 'history' | 'profile';
 
 export type DriverActiveDispatch = {
   id: number;

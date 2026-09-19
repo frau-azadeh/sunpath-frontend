@@ -1,13 +1,10 @@
+import type { DriverRouteHistory } from '@/components/driver/driver-types';
 import type {
   CreateDispatchRequest,
   Dispatch,
   UpdateDispatchStatusRequest,
   UpdateVehicleLocationRequest,
 } from '@/types/dispatch';
-
-import type {
-  DriverRouteHistory,
-} from '@/components/driver/driver-types';
 
 type ApiResponse<T> = {
   data?: T;
@@ -25,16 +22,14 @@ declare global {
 
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
-    const runtimeApiBase =
-      window.CONFIG?.NEXT_PUBLIC_API_BASE;
+    const runtimeApiBase = window.CONFIG?.NEXT_PUBLIC_API_BASE;
 
     if (runtimeApiBase) {
       return runtimeApiBase.replace(/\/$/, '');
     }
   }
 
-  const envApiBase =
-    process.env.NEXT_PUBLIC_API_BASE;
+  const envApiBase = process.env.NEXT_PUBLIC_API_BASE;
 
   if (envApiBase) {
     return envApiBase.replace(/\/$/, '');
@@ -85,37 +80,26 @@ const getErrorMessage = async (
 };
 
 export const dispatchService = {
-  async getAll(
-    signal?: AbortSignal,
-  ): Promise<Dispatch[]> {
-    const response = await fetch(
-      buildUrl('/api/dispatches'),
-      {
-        method: 'GET',
+  async getAll(signal?: AbortSignal): Promise<Dispatch[]> {
+    const response = await fetch(buildUrl('/api/dispatches'), {
+      method: 'GET',
 
-        headers: {
-          Accept: 'application/json',
-        },
-
-        cache: 'no-store',
-
-        signal,
+      headers: {
+        Accept: 'application/json',
       },
-    );
+
+      cache: 'no-store',
+
+      signal,
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'دریافت لیست مأموریت‌ها انجام نشد.',
-        ),
+        await getErrorMessage(response, 'دریافت لیست مأموریت‌ها انجام نشد.'),
       );
     }
 
-    const result:
-      | Dispatch[]
-      | ApiResponse<Dispatch[]> =
-      await response.json();
+    const result: Dispatch[] | ApiResponse<Dispatch[]> = await response.json();
 
     if (Array.isArray(result)) {
       return result;
@@ -132,31 +116,22 @@ export const dispatchService = {
     return [];
   },
 
-  async getById(
-    id: number,
-    signal?: AbortSignal,
-  ): Promise<Dispatch> {
-    const response = await fetch(
-      buildUrl(`/api/dispatches/${id}`),
-      {
-        method: 'GET',
+  async getById(id: number, signal?: AbortSignal): Promise<Dispatch> {
+    const response = await fetch(buildUrl(`/api/dispatches/${id}`), {
+      method: 'GET',
 
-        headers: {
-          Accept: 'application/json',
-        },
-
-        cache: 'no-store',
-
-        signal,
+      headers: {
+        Accept: 'application/json',
       },
-    );
+
+      cache: 'no-store',
+
+      signal,
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'دریافت مأموریت انجام نشد.',
-        ),
+        await getErrorMessage(response, 'دریافت مأموریت انجام نشد.'),
       );
     }
 
@@ -168,9 +143,7 @@ export const dispatchService = {
     signal?: AbortSignal,
   ): Promise<Dispatch | null> {
     const response = await fetch(
-      buildUrl(
-        `/api/dispatches/driver/${driverId}/active`,
-      ),
+      buildUrl(`/api/dispatches/driver/${driverId}/active`),
       {
         method: 'GET',
 
@@ -190,10 +163,7 @@ export const dispatchService = {
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'دریافت مأموریت فعال انجام نشد.',
-        ),
+        await getErrorMessage(response, 'دریافت مأموریت فعال انجام نشد.'),
       );
     }
 
@@ -215,9 +185,7 @@ export const dispatchService = {
     signal?: AbortSignal,
   ): Promise<DriverRouteHistory[]> {
     const response = await fetch(
-      buildUrl(
-        `/api/dispatches/driver/${driverId}/history`,
-      ),
+      buildUrl(`/api/dispatches/driver/${driverId}/history`),
       {
         method: 'GET',
 
@@ -267,59 +235,42 @@ export const dispatchService = {
     return [];
   },
 
-  async create(
-    data: CreateDispatchRequest,
-  ): Promise<{ id: number }> {
-    const response = await fetch(
-      buildUrl('/api/dispatches'),
-      {
-        method: 'POST',
+  async create(data: CreateDispatchRequest): Promise<{ id: number }> {
+    const response = await fetch(buildUrl('/api/dispatches'), {
+      method: 'POST',
 
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify(data),
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-    );
+
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'ایجاد مأموریت انجام نشد.',
-        ),
+        await getErrorMessage(response, 'ایجاد مأموریت انجام نشد.'),
       );
     }
 
     return response.json();
   },
 
-  async update(
-    id: number,
-    data: CreateDispatchRequest,
-  ): Promise<Dispatch> {
-    const response = await fetch(
-      buildUrl(`/api/dispatches/${id}`),
-      {
-        method: 'PUT',
+  async update(id: number, data: CreateDispatchRequest): Promise<Dispatch> {
+    const response = await fetch(buildUrl(`/api/dispatches/${id}`), {
+      method: 'PUT',
 
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify(data),
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-    );
+
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'ویرایش مأموریت انجام نشد.',
-        ),
+        await getErrorMessage(response, 'ویرایش مأموریت انجام نشد.'),
       );
     }
 
@@ -330,52 +281,36 @@ export const dispatchService = {
     id: number,
     data: UpdateDispatchStatusRequest,
   ): Promise<void> {
-    const response = await fetch(
-      buildUrl(
-        `/api/dispatches/${id}/status`,
-      ),
-      {
-        method: 'PATCH',
+    const response = await fetch(buildUrl(`/api/dispatches/${id}/status`), {
+      method: 'PATCH',
 
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify(data),
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-    );
+
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'به‌روزرسانی وضعیت مأموریت انجام نشد.',
-        ),
+        await getErrorMessage(response, 'به‌روزرسانی وضعیت مأموریت انجام نشد.'),
       );
     }
   },
 
-  async remove(
-    id: number,
-  ): Promise<void> {
-    const response = await fetch(
-      buildUrl(`/api/dispatches/${id}`),
-      {
-        method: 'DELETE',
+  async remove(id: number): Promise<void> {
+    const response = await fetch(buildUrl(`/api/dispatches/${id}`), {
+      method: 'DELETE',
 
-        headers: {
-          Accept: 'application/json',
-        },
+      headers: {
+        Accept: 'application/json',
       },
-    );
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'حذف مأموریت انجام نشد.',
-        ),
+        await getErrorMessage(response, 'حذف مأموریت انجام نشد.'),
       );
     }
   },
@@ -383,28 +318,20 @@ export const dispatchService = {
   async updateVehicleLocation(
     data: UpdateVehicleLocationRequest,
   ): Promise<void> {
-    const response = await fetch(
-      buildUrl(
-        '/api/dispatches/location',
-      ),
-      {
-        method: 'POST',
+    const response = await fetch(buildUrl('/api/dispatches/location'), {
+      method: 'POST',
 
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify(data),
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-    );
+
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       throw new Error(
-        await getErrorMessage(
-          response,
-          'ثبت موقعیت خودرو انجام نشد.',
-        ),
+        await getErrorMessage(response, 'ثبت موقعیت خودرو انجام نشد.'),
       );
     }
   },

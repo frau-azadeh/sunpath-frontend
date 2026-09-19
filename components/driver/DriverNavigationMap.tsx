@@ -1,10 +1,9 @@
 'use client';
 
-import {
-  Fragment,
-  useEffect,
-} from 'react';
+import { Fragment, useEffect } from 'react';
 
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   CircleMarker,
   MapContainer,
@@ -15,13 +14,7 @@ import {
   useMap,
 } from 'react-leaflet';
 
-import L from 'leaflet';
-
-import 'leaflet/dist/leaflet.css';
-
-import type {
-  RouteCoord,
-} from '@/hooks/useDriverNavigation';
+import type { RouteCoord } from '@/hooks/useDriverNavigation';
 
 export interface DriverNavigationMapPoint {
   lat: number;
@@ -43,10 +36,7 @@ export interface DriverNavigationMapProps {
   showTrafficLayer?: boolean;
 }
 
-const isValidCoordinate = (
-  lat: number,
-  lng: number,
-): boolean => {
+const isValidCoordinate = (lat: number, lng: number): boolean => {
   return (
     Number.isFinite(lat) &&
     Number.isFinite(lng) &&
@@ -58,18 +48,13 @@ const isValidCoordinate = (
   );
 };
 
-const createVehicleIcon = (
-  heading: number,
-): L.DivIcon => {
-  const safeHeading =
-    Number.isFinite(heading)
-      ? ((heading % 360) + 360) %
-        360
-      : 0;
+const createVehicleIcon = (heading: number): L.DivIcon => {
+  const safeHeading = Number.isFinite(heading)
+    ? ((heading % 360) + 360) % 360
+    : 0;
 
   return L.divIcon({
-    className:
-      'sunpath-driver-marker',
+    className: 'sunpath-driver-marker',
 
     html: `
       <div
@@ -130,87 +115,44 @@ function MapViewportController({
   useEffect(() => {
     if (
       !currentLocation ||
-      !isValidCoordinate(
-        currentLocation.lat,
-        currentLocation.lng,
-      )
+      !isValidCoordinate(currentLocation.lat, currentLocation.lng)
     ) {
       return;
     }
 
-    map.panTo(
-      [
-        currentLocation.lat,
-        currentLocation.lng,
-      ],
-      {
-        animate: true,
-        duration: 0.5,
-      },
-    );
-  }, [
-    map,
-    currentLocation?.lat,
-    currentLocation?.lng,
-  ]);
+    map.panTo([currentLocation.lat, currentLocation.lng], {
+      animate: true,
+      duration: 0.5,
+    });
+  }, [map, currentLocation?.lat, currentLocation?.lng]);
 
   /*
    * در شروع، کل مسیر را داخل viewport قرار می‌دهیم.
    */
   useEffect(() => {
-    const points: L.LatLngExpression[] =
-      [];
+    const points: L.LatLngExpression[] = [];
 
-    if (
-      isValidCoordinate(
-        origin.lat,
-        origin.lng,
-      )
-    ) {
-      points.push([
-        origin.lat,
-        origin.lng,
-      ]);
+    if (isValidCoordinate(origin.lat, origin.lng)) {
+      points.push([origin.lat, origin.lng]);
     }
 
-    if (
-      Array.isArray(
-        routeCoordinates,
-      )
-    ) {
+    if (Array.isArray(routeCoordinates)) {
       for (const point of routeCoordinates) {
-        if (
-          isValidCoordinate(
-            point.lat,
-            point.lng,
-          )
-        ) {
-          points.push([
-            point.lat,
-            point.lng,
-          ]);
+        if (isValidCoordinate(point.lat, point.lng)) {
+          points.push([point.lat, point.lng]);
         }
       }
     }
 
-    if (
-      isValidCoordinate(
-        destination.lat,
-        destination.lng,
-      )
-    ) {
-      points.push([
-        destination.lat,
-        destination.lng,
-      ]);
+    if (isValidCoordinate(destination.lat, destination.lng)) {
+      points.push([destination.lat, destination.lng]);
     }
 
     if (points.length < 2) {
       return;
     }
 
-    const bounds =
-      L.latLngBounds(points);
+    const bounds = L.latLngBounds(points);
 
     map.fitBounds(bounds, {
       padding: [40, 40],
@@ -239,40 +181,19 @@ export function DriverNavigationMap({
   heading,
   showTrafficLayer = false,
 }: DriverNavigationMapProps) {
-  const center: [
-    number,
-    number,
-  ] = currentLocation &&
-  isValidCoordinate(
-    currentLocation.lat,
-    currentLocation.lng,
-  )
-    ? [
-        currentLocation.lat,
-        currentLocation.lng,
-      ]
-    : [
-        origin.lat,
-        origin.lng,
-      ];
+  const center: [number, number] =
+    currentLocation &&
+    isValidCoordinate(currentLocation.lat, currentLocation.lng)
+      ? [currentLocation.lat, currentLocation.lng]
+      : [origin.lat, origin.lng];
 
-  const validRoute =
-    Array.isArray(
-      routeCoordinates,
-    )
-      ? routeCoordinates.filter(
-          (point) =>
-            isValidCoordinate(
-              point.lat,
-              point.lng,
-            ),
-        )
-      : [];
+  const validRoute = Array.isArray(routeCoordinates)
+    ? routeCoordinates.filter((point) =>
+        isValidCoordinate(point.lat, point.lng),
+      )
+    : [];
 
-  const vehicleIcon =
-    createVehicleIcon(
-      heading,
-    );
+  const vehicleIcon = createVehicleIcon(heading);
 
   return (
     <div className="relative h-full w-full">
@@ -294,28 +215,16 @@ export function DriverNavigationMap({
         />
 
         <MapViewportController
-          currentLocation={
-            currentLocation
-          }
+          currentLocation={currentLocation}
           origin={origin}
-          destination={
-            destination
-          }
-          routeCoordinates={
-            validRoute
-          }
+          destination={destination}
+          routeCoordinates={validRoute}
         />
 
         <Fragment>
-          {validRoute.length >
-            1 && (
+          {validRoute.length > 1 && (
             <Polyline
-              positions={validRoute.map(
-                (point) => [
-                  point.lat,
-                  point.lng,
-                ],
-              )}
+              positions={validRoute.map((point) => [point.lat, point.lng])}
               pathOptions={{
                 color: '#2563eb',
                 weight: 5,
@@ -325,98 +234,55 @@ export function DriverNavigationMap({
           )}
 
           <CircleMarker
-            center={[
-              origin.lat,
-              origin.lng,
-            ]}
+            center={[origin.lat, origin.lng]}
             radius={9}
             pathOptions={{
               color: '#059669',
-              fillColor:
-                '#10b981',
+              fillColor: '#10b981',
               fillOpacity: 1,
               weight: 3,
             }}
           >
             <Popup>
-              <div
-                dir="rtl"
-                className="min-w-32 text-right"
-              >
-                <strong>
-                  مبدأ مأموریت
-                </strong>
+              <div dir="rtl" className="min-w-32 text-right">
+                <strong>مبدأ مأموریت</strong>
 
-                <div className="mt-1">
-                  {origin.name}
-                </div>
+                <div className="mt-1">{origin.name}</div>
               </div>
             </Popup>
           </CircleMarker>
 
           <CircleMarker
-            center={[
-              destination.lat,
-              destination.lng,
-            ]}
+            center={[destination.lat, destination.lng]}
             radius={9}
             pathOptions={{
               color: '#dc2626',
-              fillColor:
-                '#ef4444',
+              fillColor: '#ef4444',
               fillOpacity: 1,
               weight: 3,
             }}
           >
             <Popup>
-              <div
-                dir="rtl"
-                className="min-w-32 text-right"
-              >
-                <strong>
-                  مقصد مأموریت
-                </strong>
+              <div dir="rtl" className="min-w-32 text-right">
+                <strong>مقصد مأموریت</strong>
 
-                <div className="mt-1">
-                  {
-                    destination.name
-                  }
-                </div>
+                <div className="mt-1">{destination.name}</div>
               </div>
             </Popup>
           </CircleMarker>
 
           {currentLocation &&
-            isValidCoordinate(
-              currentLocation.lat,
-              currentLocation.lng,
-            ) && (
+            isValidCoordinate(currentLocation.lat, currentLocation.lng) && (
               <Marker
-                position={[
-                  currentLocation.lat,
-                  currentLocation.lng,
-                ]}
-                icon={
-                  vehicleIcon
-                }
+                position={[currentLocation.lat, currentLocation.lng]}
+                icon={vehicleIcon}
               >
                 <Popup>
-                  <div
-                    dir="rtl"
-                    className="text-right"
-                  >
-                    <strong>
-                      موقعیت خودرو
-                    </strong>
+                  <div dir="rtl" className="text-right">
+                    <strong>موقعیت خودرو</strong>
 
                     <div className="mt-1 text-xs">
-                      جهت حرکت:{' '}
-                      {Math.round(
-                        heading,
-                      ).toLocaleString(
-                        'fa-IR',
-                      )}
-                      °
+                      جهت حرکت: {Math.round(heading).toLocaleString('fa-IR')}°
                     </div>
                   </div>
                 </Popup>

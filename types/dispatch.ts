@@ -1,9 +1,5 @@
 export type DispatchStatus =
-  | 'Assigned'
-  | 'Started'
-  | 'InProgress'
-  | 'Completed'
-  | 'Cancelled';
+  'Assigned' | 'Started' | 'InProgress' | 'Completed' | 'Cancelled';
 
 export interface Dispatch {
   id: number;
@@ -61,8 +57,7 @@ export interface CreateDispatchRequest {
   destinationLongitude: number | null;
 }
 
-export interface UpdateDispatchRequest
-  extends CreateDispatchRequest {}
+export interface UpdateDispatchRequest extends CreateDispatchRequest {}
 
 export interface UpdateDispatchStatusRequest {
   status: DispatchStatus | string;

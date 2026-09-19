@@ -78,10 +78,7 @@ function getErrorMessage(error: unknown): string {
       }
     }
 
-    if (
-      typeof parsed.title === 'string' &&
-      parsed.title.trim().length > 0
-    ) {
+    if (typeof parsed.title === 'string' && parsed.title.trim().length > 0) {
       return parsed.title;
     }
   } catch {
@@ -101,70 +98,55 @@ export default function VehiclesPageClient({
   initialDrivers,
   initialDriversError,
 }: Props) {
-  const [activeTab, setActiveTab] =
-    useState<ActiveTab>('vehicles');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('vehicles');
 
   // =========================================================
   // Vehicles
   // =========================================================
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vehiclesState, setVehiclesState] =
-    useState<LoadState>('loading');
+  const [vehiclesState, setVehiclesState] = useState<LoadState>('loading');
 
-  const [isRefreshingVehicles, setIsRefreshingVehicles] =
-    useState(false);
+  const [isRefreshingVehicles, setIsRefreshingVehicles] = useState(false);
 
-  const [isVehicleModalOpen, setIsVehicleModalOpen] =
-    useState(false);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
 
-  const [selectedVehicle, setSelectedVehicle] =
-    useState<Vehicle | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-  const [isSubmittingVehicle, setIsSubmittingVehicle] =
-    useState(false);
+  const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false);
 
   const [vehiclePendingDelete, setVehiclePendingDelete] =
     useState<Vehicle | null>(null);
 
-  const [isDeletingVehicle, setIsDeletingVehicle] =
-    useState(false);
+  const [isDeletingVehicle, setIsDeletingVehicle] = useState(false);
 
-  const [vehicleError, setVehicleError] =
-    useState<string | null>(null);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
 
   // =========================================================
   // Drivers
   // =========================================================
 
-  const [drivers, setDrivers] =
-    useState<Driver[]>(initialDrivers ?? []);
+  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers ?? []);
 
-  const [driversState, setDriversState] =
-    useState<LoadState>(
-      initialDriversError ? 'error' : 'loading',
-    );
+  const [driversState, setDriversState] = useState<LoadState>(
+    initialDriversError ? 'error' : 'loading',
+  );
 
-  const [isRefreshingDrivers, setIsRefreshingDrivers] =
-    useState(false);
+  const [isRefreshingDrivers, setIsRefreshingDrivers] = useState(false);
 
-  const [isDriverModalOpen, setIsDriverModalOpen] =
-    useState(false);
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
 
-  const [selectedDriver, setSelectedDriver] =
-    useState<Driver | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
 
-  const [isSubmittingDriver, setIsSubmittingDriver] =
-    useState(false);
+  const [isSubmittingDriver, setIsSubmittingDriver] = useState(false);
 
-  const [driverPendingDelete, setDriverPendingDelete] =
-    useState<Driver | null>(null);
+  const [driverPendingDelete, setDriverPendingDelete] = useState<Driver | null>(
+    null,
+  );
 
-  const [isDeletingDriver, setIsDeletingDriver] =
-    useState(false);
+  const [isDeletingDriver, setIsDeletingDriver] = useState(false);
 
-  const [driverError, setDriverError] =
-    useState<string | null>(null);
+  const [driverError, setDriverError] = useState<string | null>(null);
 
   // =========================================================
   // Dispatch
@@ -180,23 +162,20 @@ export default function VehiclesPageClient({
     clearError: clearDispatchError,
   } = useDispatchStore();
 
-  const [isDispatchModalOpen, setIsDispatchModalOpen] =
-    useState(false);
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
 
-  const [isSubmittingDispatch, setIsSubmittingDispatch] =
-    useState(false);
+  const [isSubmittingDispatch, setIsSubmittingDispatch] = useState(false);
 
-  const [selectedDispatch, setSelectedDispatch] =
-    useState<Dispatch | null>(null);
+  const [selectedDispatch, setSelectedDispatch] = useState<Dispatch | null>(
+    null,
+  );
 
   // =========================================================
   // Vehicles API
   // =========================================================
 
   const loadVehicles = useCallback(
-    async (
-      withRefreshLoader = false,
-    ): Promise<void> => {
+    async (withRefreshLoader = false): Promise<void> => {
       if (withRefreshLoader) {
         setIsRefreshingVehicles(true);
       } else {
@@ -209,9 +188,7 @@ export default function VehiclesPageClient({
         const data = await vehicleService.getAll();
 
         if (!Array.isArray(data)) {
-          throw new Error(
-            'ساختار پاسخ خودروها معتبر نیست.',
-          );
+          throw new Error('ساختار پاسخ خودروها معتبر نیست.');
         }
 
         setVehicles(data);
@@ -243,9 +220,7 @@ export default function VehiclesPageClient({
   // =========================================================
 
   const loadDrivers = useCallback(
-    async (
-      withRefreshLoader = false,
-    ): Promise<void> => {
+    async (withRefreshLoader = false): Promise<void> => {
       if (withRefreshLoader) {
         setIsRefreshingDrivers(true);
       } else {
@@ -258,9 +233,7 @@ export default function VehiclesPageClient({
         const data = await driverService.getAll();
 
         if (!Array.isArray(data)) {
-          throw new Error(
-            'ساختار پاسخ رانندگان معتبر نیست.',
-          );
+          throw new Error('ساختار پاسخ رانندگان معتبر نیست.');
         }
 
         setDrivers(data);
@@ -301,10 +274,9 @@ export default function VehiclesPageClient({
     };
   }, [fetchDispatches]);
 
-  const handleRefreshDispatches =
-    async (): Promise<void> => {
-      await fetchDispatches();
-    };
+  const handleRefreshDispatches = async (): Promise<void> => {
+    await fetchDispatches();
+  };
 
   // =========================================================
   // Vehicle Actions
@@ -316,9 +288,7 @@ export default function VehiclesPageClient({
     setIsVehicleModalOpen(true);
   };
 
-  const handleOpenEditVehicle = (
-    vehicle: Vehicle,
-  ): void => {
+  const handleOpenEditVehicle = (vehicle: Vehicle): void => {
     setSelectedVehicle(vehicle);
     setVehicleError(null);
     setIsVehicleModalOpen(true);
@@ -342,10 +312,7 @@ export default function VehiclesPageClient({
 
     try {
       if (selectedVehicle) {
-        await vehicleService.update(
-          selectedVehicle.id,
-          data,
-        );
+        await vehicleService.update(selectedVehicle.id, data);
       } else {
         await vehicleService.create(data);
       }
@@ -365,42 +332,35 @@ export default function VehiclesPageClient({
     }
   };
 
-  const handleConfirmDeleteVehicle =
-    async (): Promise<void> => {
-      if (!vehiclePendingDelete) {
-        return;
+  const handleConfirmDeleteVehicle = async (): Promise<void> => {
+    if (!vehiclePendingDelete) {
+      return;
+    }
+
+    setIsDeletingVehicle(true);
+    setVehicleError(null);
+
+    try {
+      await vehicleService.remove(vehiclePendingDelete.id);
+
+      setVehicles((currentVehicles) =>
+        currentVehicles.filter(
+          (vehicle) => vehicle.id !== vehiclePendingDelete.id,
+        ),
+      );
+
+      setVehiclePendingDelete(null);
+
+      if (selectedVehicle?.id === vehiclePendingDelete.id) {
+        setSelectedVehicle(null);
+        setIsVehicleModalOpen(false);
       }
-
-      setIsDeletingVehicle(true);
-      setVehicleError(null);
-
-      try {
-        await vehicleService.remove(
-          vehiclePendingDelete.id,
-        );
-
-        setVehicles((currentVehicles) =>
-          currentVehicles.filter(
-            (vehicle) =>
-              vehicle.id !== vehiclePendingDelete.id,
-          ),
-        );
-
-        setVehiclePendingDelete(null);
-
-        if (
-          selectedVehicle?.id ===
-          vehiclePendingDelete.id
-        ) {
-          setSelectedVehicle(null);
-          setIsVehicleModalOpen(false);
-        }
-      } catch (error: unknown) {
-        setVehicleError(getErrorMessage(error));
-      } finally {
-        setIsDeletingVehicle(false);
-      }
-    };
+    } catch (error: unknown) {
+      setVehicleError(getErrorMessage(error));
+    } finally {
+      setIsDeletingVehicle(false);
+    }
+  };
 
   // =========================================================
   // Driver Actions
@@ -412,9 +372,7 @@ export default function VehiclesPageClient({
     setIsDriverModalOpen(true);
   };
 
-  const handleOpenEditDriver = (
-    driver: Driver,
-  ): void => {
+  const handleOpenEditDriver = (driver: Driver): void => {
     setSelectedDriver(driver);
     setDriverError(null);
     setIsDriverModalOpen(true);
@@ -443,9 +401,7 @@ export default function VehiclesPageClient({
          * دریافت کرده باشیم.
          */
         if (!isUpdateDriverRequest(data)) {
-          throw new Error(
-            'اطلاعات ویرایش راننده معتبر نیست.',
-          );
+          throw new Error('اطلاعات ویرایش راننده معتبر نیست.');
         }
 
         const updateRequest: UpdateDriverRequest = {
@@ -466,23 +422,17 @@ export default function VehiclesPageClient({
           typeof data.password === 'string' &&
           data.password.trim().length > 0
         ) {
-          updateRequest.password =
-            data.password.trim();
+          updateRequest.password = data.password.trim();
         }
 
-        await driverService.update(
-          selectedDriver.id,
-          updateRequest,
-        );
+        await driverService.update(selectedDriver.id, updateRequest);
       } else {
         /*
          * در حالت ثبت نباید UpdateDriverRequest
          * دریافت شده باشد.
          */
         if (isUpdateDriverRequest(data)) {
-          throw new Error(
-            'اطلاعات ثبت راننده معتبر نیست.',
-          );
+          throw new Error('اطلاعات ثبت راننده معتبر نیست.');
         }
 
         const createRequest: CreateDriverRequest = {
@@ -514,42 +464,33 @@ export default function VehiclesPageClient({
     }
   };
 
-  const handleConfirmDeleteDriver =
-    async (): Promise<void> => {
-      if (!driverPendingDelete) {
-        return;
+  const handleConfirmDeleteDriver = async (): Promise<void> => {
+    if (!driverPendingDelete) {
+      return;
+    }
+
+    setIsDeletingDriver(true);
+    setDriverError(null);
+
+    try {
+      await driverService.remove(driverPendingDelete.id);
+
+      setDrivers((currentDrivers) =>
+        currentDrivers.filter((driver) => driver.id !== driverPendingDelete.id),
+      );
+
+      setDriverPendingDelete(null);
+
+      if (selectedDriver?.id === driverPendingDelete.id) {
+        setSelectedDriver(null);
+        setIsDriverModalOpen(false);
       }
-
-      setIsDeletingDriver(true);
-      setDriverError(null);
-
-      try {
-        await driverService.remove(
-          driverPendingDelete.id,
-        );
-
-        setDrivers((currentDrivers) =>
-          currentDrivers.filter(
-            (driver) =>
-              driver.id !== driverPendingDelete.id,
-          ),
-        );
-
-        setDriverPendingDelete(null);
-
-        if (
-          selectedDriver?.id ===
-          driverPendingDelete.id
-        ) {
-          setSelectedDriver(null);
-          setIsDriverModalOpen(false);
-        }
-      } catch (error: unknown) {
-        setDriverError(getErrorMessage(error));
-      } finally {
-        setIsDeletingDriver(false);
-      }
-    };
+    } catch (error: unknown) {
+      setDriverError(getErrorMessage(error));
+    } finally {
+      setIsDeletingDriver(false);
+    }
+  };
 
   // =========================================================
   // Dispatch Actions
@@ -561,9 +502,7 @@ export default function VehiclesPageClient({
     setIsDispatchModalOpen(true);
   };
 
-  const handleOpenEditDispatch = (
-    dispatch: Dispatch,
-  ): void => {
+  const handleOpenEditDispatch = (dispatch: Dispatch): void => {
     clearDispatchError();
     setSelectedDispatch(dispatch);
     setIsDispatchModalOpen(true);
@@ -586,10 +525,7 @@ export default function VehiclesPageClient({
 
     try {
       if (selectedDispatch) {
-        await dispatchService.update(
-          selectedDispatch.id,
-          data,
-        );
+        await dispatchService.update(selectedDispatch.id, data);
       } else {
         await createDispatch(data);
       }
@@ -605,9 +541,7 @@ export default function VehiclesPageClient({
     }
   };
 
-  const handleDeleteDispatch = async (
-    dispatch: Dispatch,
-  ): Promise<void> => {
+  const handleDeleteDispatch = async (dispatch: Dispatch): Promise<void> => {
     try {
       await dispatchService.remove(dispatch.id);
       await fetchDispatches();
@@ -654,10 +588,7 @@ export default function VehiclesPageClient({
 
   return (
     <>
-      <div
-        dir="rtl"
-        className="flex flex-col gap-6 font-vazir"
-      >
+      <div dir="rtl" className="flex flex-col gap-6 font-vazir">
         <header className="flex flex-col gap-5 rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
@@ -682,8 +613,7 @@ export default function VehiclesPageClient({
               </div>
 
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                پایش، تخصیص خودرو به راننده و کنترل
-                مأموریت‌ها
+                پایش، تخصیص خودرو به راننده و کنترل مأموریت‌ها
               </p>
             </div>
           </div>
@@ -692,9 +622,7 @@ export default function VehiclesPageClient({
             <div className="flex rounded-2xl border border-neutral-200 bg-neutral-100/80 p-1.5 dark:border-neutral-800 dark:bg-neutral-950">
               <TabButton
                 active={activeTab === 'vehicles'}
-                onClick={() =>
-                  setActiveTab('vehicles')
-                }
+                onClick={() => setActiveTab('vehicles')}
                 icon={<Car size={15} />}
                 label="خودروها"
                 count={vehicles.length}
@@ -702,9 +630,7 @@ export default function VehiclesPageClient({
 
               <TabButton
                 active={activeTab === 'drivers'}
-                onClick={() =>
-                  setActiveTab('drivers')
-                }
+                onClick={() => setActiveTab('drivers')}
                 icon={<User size={15} />}
                 label="رانندگان"
                 count={drivers.length}
@@ -712,9 +638,7 @@ export default function VehiclesPageClient({
 
               <TabButton
                 active={activeTab === 'dispatches'}
-                onClick={() =>
-                  setActiveTab('dispatches')
-                }
+                onClick={() => setActiveTab('dispatches')}
                 icon={<Navigation size={15} />}
                 label="تخصیص و مأموریت‌ها"
                 count={dispatches.length}
@@ -725,20 +649,14 @@ export default function VehiclesPageClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    void loadVehicles(true)
-                  }
+                  onClick={() => void loadVehicles(true)}
                   disabled={isRefreshingVehicles}
                   aria-label="بارگذاری مجدد خودروها"
                   className="flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-600 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 >
                   <RefreshCw
                     size={17}
-                    className={
-                      isRefreshingVehicles
-                        ? 'animate-spin'
-                        : ''
-                    }
+                    className={isRefreshingVehicles ? 'animate-spin' : ''}
                   />
                 </button>
 
@@ -757,20 +675,14 @@ export default function VehiclesPageClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    void loadDrivers(true)
-                  }
+                  onClick={() => void loadDrivers(true)}
                   disabled={isRefreshingDrivers}
                   aria-label="بارگذاری مجدد رانندگان"
                   className="flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-600 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 >
                   <RefreshCw
                     size={17}
-                    className={
-                      isRefreshingDrivers
-                        ? 'animate-spin'
-                        : ''
-                    }
+                    className={isRefreshingDrivers ? 'animate-spin' : ''}
                   />
                 </button>
 
@@ -789,20 +701,14 @@ export default function VehiclesPageClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    void handleRefreshDispatches()
-                  }
+                  onClick={() => void handleRefreshDispatches()}
                   disabled={dispatchesLoading}
                   aria-label="بارگذاری مجدد مأموریت‌ها"
                   className="flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-600 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 >
                   <RefreshCw
                     size={17}
-                    className={
-                      dispatchesLoading
-                        ? 'animate-spin'
-                        : ''
-                    }
+                    className={dispatchesLoading ? 'animate-spin' : ''}
                   />
                 </button>
 
@@ -838,14 +744,9 @@ export default function VehiclesPageClient({
               className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
             >
               <div className="flex min-w-0 items-start gap-3">
-                <AlertCircle
-                  className="mt-0.5 shrink-0"
-                  size={18}
-                />
+                <AlertCircle className="mt-0.5 shrink-0" size={18} />
 
-                <p className="text-sm leading-6">
-                  {activeError}
-                </p>
+                <p className="text-sm leading-6">{activeError}</p>
               </div>
 
               <button
@@ -865,9 +766,7 @@ export default function VehiclesPageClient({
             vehicles={vehicles}
             vehiclesState={vehiclesState}
             isRefreshing={isRefreshingVehicles}
-            onRefresh={() =>
-              void loadVehicles(true)
-            }
+            onRefresh={() => void loadVehicles(true)}
             onEdit={handleOpenEditVehicle}
             onDelete={(vehicle) => {
               setVehicleError(null);
@@ -881,9 +780,7 @@ export default function VehiclesPageClient({
             drivers={drivers}
             driversState={driversState}
             isRefreshing={isRefreshingDrivers}
-            onRefresh={() =>
-              void loadDrivers(true)
-            }
+            onRefresh={() => void loadDrivers(true)}
             onEdit={handleOpenEditDriver}
             onDelete={(driver) => {
               setDriverError(null);
@@ -925,9 +822,7 @@ export default function VehiclesPageClient({
 
       <DispatchFormModal
         isOpen={isDispatchModalOpen}
-        mode={
-          selectedDispatch ? 'edit' : 'create'
-        }
+        mode={selectedDispatch ? 'edit' : 'create'}
         initialData={selectedDispatch}
         vehicles={vehicles}
         drivers={drivers}
@@ -948,10 +843,7 @@ export default function VehiclesPageClient({
         onConfirm={handleConfirmDeleteVehicle}
       >
         آیا از حذف خودرو با پلاک{' '}
-        <strong
-          dir="ltr"
-          className="mx-1 text-neutral-900 dark:text-white"
-        >
+        <strong dir="ltr" className="mx-1 text-neutral-900 dark:text-white">
           {vehiclePendingDelete?.plateNumber}
         </strong>{' '}
         اطمینان دارید؟
@@ -970,8 +862,7 @@ export default function VehiclesPageClient({
       >
         آیا از حذف راننده{' '}
         <strong className="mx-1 text-neutral-900 dark:text-white">
-          {driverPendingDelete?.firstName}{' '}
-          {driverPendingDelete?.lastName}
+          {driverPendingDelete?.firstName} {driverPendingDelete?.lastName}
         </strong>{' '}
         اطمینان دارید؟
       </ConfirmDeleteModal>
@@ -987,13 +878,7 @@ interface TabButtonProps {
   count: number;
 }
 
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-  count,
-}: TabButtonProps) {
+function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
   return (
     <button
       type="button"
@@ -1011,13 +896,9 @@ function TabButton({
         />
       )}
 
-      <span className="relative z-10">
-        {icon}
-      </span>
+      <span className="relative z-10">{icon}</span>
 
-      <span className="relative z-10">
-        {label}
-      </span>
+      <span className="relative z-10">{label}</span>
 
       <span className="relative z-10 rounded-lg bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-600 dark:bg-orange-950/60 dark:text-orange-300">
         {count.toLocaleString('fa-IR')}
@@ -1133,17 +1014,12 @@ function ConfirmDeleteModal({
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDeleting ? (
-                  <Loader2
-                    className="animate-spin"
-                    size={18}
-                  />
+                  <Loader2 className="animate-spin" size={18} />
                 ) : (
                   <Trash2 size={18} />
                 )}
 
-                {isDeleting
-                  ? 'در حال حذف...'
-                  : 'تایید و حذف'}
+                {isDeleting ? 'در حال حذف...' : 'تایید و حذف'}
               </button>
             </div>
           </motion.div>

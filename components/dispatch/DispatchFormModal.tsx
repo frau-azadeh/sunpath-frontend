@@ -252,8 +252,9 @@ function DispatchFormContent({
     formError: null,
   }));
 
-  const [routeEstimate, setRouteEstimate] =
-    useState<RouteEstimate | null>(null);
+  const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(
+    null,
+  );
 
   const isEditMode = mode === 'edit';
 
@@ -266,9 +267,7 @@ function DispatchFormContent({
       return undefined;
     }
 
-    return vehicles.find(
-      (vehicle) => vehicle.id === Number(form.vehicleId),
-    );
+    return vehicles.find((vehicle) => vehicle.id === Number(form.vehicleId));
   }, [form.vehicleId, vehicles]);
 
   /* ============================================================
@@ -300,9 +299,7 @@ function DispatchFormContent({
       return undefined;
     }
 
-    return drivers.find(
-      (driver) => driver.id === Number(form.driverId),
-    );
+    return drivers.find((driver) => driver.id === Number(form.driverId));
   }, [drivers, form.driverId]);
 
   /* ============================================================
@@ -342,11 +339,7 @@ function DispatchFormContent({
           'راننده قبلی مجاز به رانندگی با خودروی انتخاب‌شده نیست. لطفاً راننده دیگری انتخاب کنید.',
       }));
     }
-  }, [
-    drivers,
-    form.driverId,
-    selectedVehicleObj,
-  ]);
+  }, [drivers, form.driverId, selectedVehicleObj]);
 
   /* ============================================================
      Route Estimate
@@ -392,9 +385,7 @@ function DispatchFormContent({
         const response = await fetch(url);
 
         if (!response.ok) {
-          throw new Error(
-            `OSRM request failed: ${response.status}`,
-          );
+          throw new Error(`OSRM request failed: ${response.status}`);
         }
 
         const data = (await response.json()) as {
@@ -414,23 +405,18 @@ function DispatchFormContent({
           throw new Error('Route not found');
         }
 
-        const distanceKm = Number(
-          (route.distance / 1000).toFixed(1),
-        );
+        const distanceKm = Number((route.distance / 1000).toFixed(1));
 
         /*
          * OSRM ترافیک لحظه‌ای ارائه نمی‌کند.
          * این ضریب صرفاً حاشیه تخمینی زمان است.
          */
-        const durationMinutes = Math.round(
-          (route.duration / 60) * 1.25,
-        );
+        const durationMinutes = Math.round((route.duration / 60) * 1.25);
 
         setRouteEstimate({
           distanceKm,
           durationMinutes,
-          durationFormatted:
-            formatDuration(durationMinutes),
+          durationFormatted: formatDuration(durationMinutes),
           loading: false,
         });
       } catch {
@@ -450,13 +436,9 @@ function DispatchFormContent({
          */
         const earthRadiusKm = 6371;
 
-        const dLat =
-          ((destination.lat - origin.lat) * Math.PI) /
-          180;
+        const dLat = ((destination.lat - origin.lat) * Math.PI) / 180;
 
-        const dLon =
-          ((destination.lng - origin.lng) * Math.PI) /
-          180;
+        const dLon = ((destination.lng - origin.lng) * Math.PI) / 180;
 
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -465,33 +447,22 @@ function DispatchFormContent({
             Math.sin(dLon / 2) *
             Math.sin(dLon / 2);
 
-        const c =
-          2 *
-          Math.atan2(
-            Math.sqrt(a),
-            Math.sqrt(1 - a),
-          );
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         /*
          * 1.3 برای تقریب پیچ‌وخم مسیر جاده‌ای.
          */
-        const estimatedDistanceKm =
-          earthRadiusKm * c * 1.3;
+        const estimatedDistanceKm = earthRadiusKm * c * 1.3;
 
         /*
          * سرعت میانگین فرضی 35km/h
          */
-        const durationMinutes = Math.round(
-          (estimatedDistanceKm / 35) * 60,
-        );
+        const durationMinutes = Math.round((estimatedDistanceKm / 35) * 60);
 
         setRouteEstimate({
-          distanceKm: Number(
-            estimatedDistanceKm.toFixed(1),
-          ),
+          distanceKm: Number(estimatedDistanceKm.toFixed(1)),
           durationMinutes,
-          durationFormatted:
-            formatDuration(durationMinutes),
+          durationFormatted: formatDuration(durationMinutes),
           loading: false,
         });
       }
@@ -508,12 +479,8 @@ function DispatchFormContent({
      Vehicle Select
   ============================================================ */
 
-  const handleVehicleSelect = (
-    vehicleIdValue: string,
-  ): void => {
-    const vehicleId = vehicleIdValue
-      ? Number(vehicleIdValue)
-      : '';
+  const handleVehicleSelect = (vehicleIdValue: string): void => {
+    const vehicleId = vehicleIdValue ? Number(vehicleIdValue) : '';
 
     setForm((current) => ({
       ...current,
@@ -531,17 +498,11 @@ function DispatchFormContent({
      Driver Select
   ============================================================ */
 
-  const handleDriverSelect = (
-    driverIdValue: string,
-  ): void => {
-    const driverId = driverIdValue
-      ? Number(driverIdValue)
-      : '';
+  const handleDriverSelect = (driverIdValue: string): void => {
+    const driverId = driverIdValue ? Number(driverIdValue) : '';
 
     setForm((currentForm) => {
-      const selectedDriver = drivers.find(
-        (driver) => driver.id === driverId,
-      );
+      const selectedDriver = drivers.find((driver) => driver.id === driverId);
 
       const updatedOriginTitle =
         !currentForm.originTitle && selectedDriver
@@ -561,10 +522,7 @@ function DispatchFormContent({
      Map
   ============================================================ */
 
-  const handleMapSelect = (
-    lat: number,
-    lng: number,
-  ): void => {
+  const handleMapSelect = (lat: number, lng: number): void => {
     setForm((currentForm) => {
       if (currentForm.pickMode === 'origin') {
         return {
@@ -614,16 +572,13 @@ function DispatchFormContent({
     if (!form.driverId) {
       setForm((current) => ({
         ...current,
-        formError:
-          'لطفاً راننده مجاز برای این خودرو را انتخاب کنید.',
+        formError: 'لطفاً راننده مجاز برای این خودرو را انتخاب کنید.',
       }));
 
       return;
     }
 
-    const vehicle = vehicles.find(
-      (item) => item.id === Number(form.vehicleId),
-    );
+    const vehicle = vehicles.find((item) => item.id === Number(form.vehicleId));
 
     if (!vehicle) {
       setForm((current) => ({
@@ -634,9 +589,7 @@ function DispatchFormContent({
       return;
     }
 
-    const driver = drivers.find(
-      (item) => item.id === Number(form.driverId),
-    );
+    const driver = drivers.find((item) => item.id === Number(form.driverId));
 
     if (!driver) {
       setForm((current) => ({
@@ -695,8 +648,7 @@ function DispatchFormContent({
     if (!form.originTitle.trim()) {
       setForm((current) => ({
         ...current,
-        formError:
-          'نام یا آدرس مبدأ را وارد کنید.',
+        formError: 'نام یا آدرس مبدأ را وارد کنید.',
       }));
 
       return;
@@ -705,8 +657,7 @@ function DispatchFormContent({
     if (!form.destinationTitle.trim()) {
       setForm((current) => ({
         ...current,
-        formError:
-          'نام یا آدرس مقصد را وارد کنید.',
+        formError: 'نام یا آدرس مقصد را وارد کنید.',
       }));
 
       return;
@@ -724,25 +675,19 @@ function DispatchFormContent({
 
         title: form.title.trim(),
 
-        description:
-          form.description.trim() || null,
+        description: form.description.trim() || null,
 
         originTitle: form.originTitle.trim(),
 
-        originLatitude:
-          form.originCoords?.lat ?? null,
+        originLatitude: form.originCoords?.lat ?? null,
 
-        originLongitude:
-          form.originCoords?.lng ?? null,
+        originLongitude: form.originCoords?.lng ?? null,
 
-        destinationTitle:
-          form.destinationTitle.trim(),
+        destinationTitle: form.destinationTitle.trim(),
 
-        destinationLatitude:
-          form.destinationCoords?.lat ?? null,
+        destinationLatitude: form.destinationCoords?.lat ?? null,
 
-        destinationLongitude:
-          form.destinationCoords?.lng ?? null,
+        destinationLongitude: form.destinationCoords?.lng ?? null,
       });
 
       onClose();
@@ -750,9 +695,7 @@ function DispatchFormContent({
       setForm((current) => ({
         ...current,
         formError:
-          error instanceof Error
-            ? error.message
-            : 'خطا در ثبت مأموریت',
+          error instanceof Error ? error.message : 'خطا در ثبت مأموریت',
       }));
     }
   };
@@ -794,8 +737,7 @@ function DispatchFormContent({
             </h2>
 
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              انتخاب هوشمند راننده بر اساس نوع خودرو و
-              گواهینامه
+              انتخاب هوشمند راننده بر اساس نوع خودرو و گواهینامه
             </p>
           </div>
         </div>
@@ -815,16 +757,10 @@ function DispatchFormContent({
           Form
       ===================================================== */}
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex-1 overflow-y-auto p-6"
-      >
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
         {form.formError && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold leading-5 text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
-            <AlertCircle
-              size={16}
-              className="mt-0.5 shrink-0"
-            />
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
 
             <span>{form.formError}</span>
           </div>
@@ -841,16 +777,9 @@ function DispatchFormContent({
             <div>
               <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-neutral-700 dark:text-neutral-300">
                 <span className="flex items-center gap-1.5">
-                  <Car
-                    size={15}
-                    className="text-orange-500"
-                  />
-
+                  <Car size={15} className="text-orange-500" />
                   خودرو هدف
-
-                  <span className="text-red-500">
-                    *
-                  </span>
+                  <span className="text-red-500">*</span>
                 </span>
 
                 {selectedVehicleObj && (
@@ -862,19 +791,12 @@ function DispatchFormContent({
 
               <select
                 value={form.vehicleId}
-                onChange={(event) =>
-                  handleVehicleSelect(
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => handleVehicleSelect(event.target.value)}
                 required
                 disabled={isSubmitting}
                 className={`${selectBase} ${inputLight} ${inputDark}`}
               >
-                <option
-                  value=""
-                  className={selectOptionBase}
-                >
+                <option value="" className={selectOptionBase}>
                   انتخاب خودرو...
                 </option>
 
@@ -884,36 +806,25 @@ function DispatchFormContent({
                     value={vehicle.id}
                     className={selectOptionBase}
                   >
-                    {vehicle.plateNumber} -{' '}
-                    {vehicle.model || 'نامشخص'} -{' '}
-                    {getVehicleTypeLabel(
-                      Number(vehicle.vehicleType),
-                    )}
+                    {vehicle.plateNumber} - {vehicle.model || 'نامشخص'} -{' '}
+                    {getVehicleTypeLabel(Number(vehicle.vehicleType))}
                   </option>
                 ))}
               </select>
 
               {selectedVehicleObj && (
                 <div className="mt-2 flex items-start gap-2 rounded-xl border border-orange-100 bg-orange-50/70 px-3 py-2 text-[11px] leading-5 text-orange-700 dark:border-orange-900/40 dark:bg-orange-950/20 dark:text-orange-300">
-                  <ShieldCheck
-                    size={14}
-                    className="mt-0.5 shrink-0"
-                  />
+                  <ShieldCheck size={14} className="mt-0.5 shrink-0" />
 
                   <div>
                     <span className="font-bold">
                       {getVehicleTypeLabel(
-                        Number(
-                          selectedVehicleObj.vehicleType,
-                        ),
+                        Number(selectedVehicleObj.vehicleType),
                       )}
                       :
                     </span>{' '}
-
                     {getRequiredLicenseDescription(
-                      Number(
-                        selectedVehicleObj.vehicleType,
-                      ),
+                      Number(selectedVehicleObj.vehicleType),
                     )}
                   </div>
                 </div>
@@ -925,41 +836,23 @@ function DispatchFormContent({
             <div>
               <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-neutral-700 dark:text-neutral-300">
                 <span className="flex items-center gap-1.5">
-                  <User
-                    size={15}
-                    className="text-orange-500"
-                  />
-
+                  <User size={15} className="text-orange-500" />
                   راننده مجری
-
-                  <span className="text-red-500">
-                    *
-                  </span>
+                  <span className="text-red-500">*</span>
                 </span>
 
                 {selectedDriverObj && (
                   <span className="flex items-center gap-1 text-[10px] text-emerald-500">
-                    <Activity
-                      size={12}
-                      className="animate-pulse"
-                    />
+                    <Activity size={12} className="animate-pulse" />
 
-                    {getLicenseTypeLabel(
-                      Number(
-                        selectedDriverObj.licenseType,
-                      ),
-                    )}
+                    {getLicenseTypeLabel(Number(selectedDriverObj.licenseType))}
                   </span>
                 )}
               </label>
 
               <select
                 value={form.driverId}
-                onChange={(event) =>
-                  handleDriverSelect(
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => handleDriverSelect(event.target.value)}
                 required
                 disabled={
                   isSubmitting ||
@@ -968,10 +861,7 @@ function DispatchFormContent({
                 }
                 className={`${selectBase} ${inputLight} ${inputDark} disabled:cursor-not-allowed disabled:opacity-60`}
               >
-                <option
-                  value=""
-                  className={selectOptionBase}
-                >
+                <option value="" className={selectOptionBase}>
                   {!selectedVehicleObj
                     ? 'ابتدا خودرو را انتخاب کنید...'
                     : compatibleDrivers.length === 0
@@ -985,47 +875,33 @@ function DispatchFormContent({
                     value={driver.id}
                     className={selectOptionBase}
                   >
-                    {driver.firstName}{' '}
-                    {driver.lastName} -{' '}
-                    {getLicenseTypeLabel(
-                      Number(driver.licenseType),
-                    )}
-                    {driver.phone
-                      ? ` (${driver.phone})`
-                      : ''}
+                    {driver.firstName} {driver.lastName} -{' '}
+                    {getLicenseTypeLabel(Number(driver.licenseType))}
+                    {driver.phone ? ` (${driver.phone})` : ''}
                   </option>
                 ))}
               </select>
 
-              {selectedVehicleObj &&
-                compatibleDrivers.length > 0 && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 size={13} />
+              {selectedVehicleObj && compatibleDrivers.length > 0 && (
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 size={13} />
 
-                    <span>
-                      {
-                        compatibleDrivers.length
-                      }{' '}
-                      راننده مجاز برای این خودرو
-                    </span>
-                  </div>
-                )}
+                  <span>
+                    {compatibleDrivers.length} راننده مجاز برای این خودرو
+                  </span>
+                </div>
+              )}
 
-              {selectedVehicleObj &&
-                compatibleDrivers.length === 0 && (
-                  <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-red-50 px-2.5 py-2 text-[11px] leading-5 text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                    <AlertCircle
-                      size={13}
-                      className="mt-0.5 shrink-0"
-                    />
+              {selectedVehicleObj && compatibleDrivers.length === 0 && (
+                <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-red-50 px-2.5 py-2 text-[11px] leading-5 text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                  <AlertCircle size={13} className="mt-0.5 shrink-0" />
 
-                    <span>
-                      هیچ راننده فعال و دارای
-                      گواهینامه مناسب برای این خودرو
-                      وجود ندارد.
-                    </span>
-                  </div>
-                )}
+                  <span>
+                    هیچ راننده فعال و دارای گواهینامه مناسب برای این خودرو وجود
+                    ندارد.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1035,16 +911,11 @@ function DispatchFormContent({
 
           {!selectedVehicleObj && (
             <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2.5 text-[11px] leading-5 text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300">
-              <Info
-                size={15}
-                className="mt-0.5 shrink-0"
-              />
+              <Info size={15} className="mt-0.5 shrink-0" />
 
               <span>
-                ابتدا خودرو را انتخاب کنید. سیستم
-                براساس نوع خودرو فقط رانندگانی را
-                نمایش می‌دهد که گواهینامه مناسب آن
-                خودرو را دارند.
+                ابتدا خودرو را انتخاب کنید. سیستم براساس نوع خودرو فقط رانندگانی
+                را نمایش می‌دهد که گواهینامه مناسب آن خودرو را دارند.
               </span>
             </div>
           )}
@@ -1056,10 +927,7 @@ function DispatchFormContent({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                عنوان مأموریت{' '}
-                <span className="text-red-500">
-                  *
-                </span>
+                عنوان مأموریت <span className="text-red-500">*</span>
               </label>
 
               <input
@@ -1090,8 +958,7 @@ function DispatchFormContent({
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    description:
-                      event.target.value,
+                    description: event.target.value,
                   }))
                 }
                 placeholder="مثال: بار حساس است، تردد از بزرگراه همت..."
@@ -1108,16 +975,9 @@ function DispatchFormContent({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                <MapPin
-                  size={14}
-                  className="text-emerald-600"
-                />
-
+                <MapPin size={14} className="text-emerald-600" />
                 عنوان یا آدرس مبدأ
-
-                <span className="text-red-500">
-                  *
-                </span>
+                <span className="text-red-500">*</span>
               </label>
 
               <input
@@ -1126,8 +986,7 @@ function DispatchFormContent({
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    originTitle:
-                      event.target.value,
+                    originTitle: event.target.value,
                     formError: null,
                   }))
                 }
@@ -1140,16 +999,9 @@ function DispatchFormContent({
 
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                <Flag
-                  size={14}
-                  className="text-rose-600"
-                />
-
+                <Flag size={14} className="text-rose-600" />
                 عنوان یا آدرس مقصد
-
-                <span className="text-red-500">
-                  *
-                </span>
+                <span className="text-red-500">*</span>
               </label>
 
               <input
@@ -1158,8 +1010,7 @@ function DispatchFormContent({
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    destinationTitle:
-                      event.target.value,
+                    destinationTitle: event.target.value,
                     formError: null,
                   }))
                 }
@@ -1197,9 +1048,7 @@ function DispatchFormContent({
                 }`}
               >
                 <MapPin size={13} />
-
-                انتخاب مبدأ{' '}
-                {form.originCoords ? '✓' : ''}
+                انتخاب مبدأ {form.originCoords ? '✓' : ''}
               </button>
 
               <button
@@ -1218,11 +1067,7 @@ function DispatchFormContent({
                 }`}
               >
                 <Flag size={13} />
-
-                انتخاب مقصد{' '}
-                {form.destinationCoords
-                  ? '✓'
-                  : ''}
+                انتخاب مقصد {form.destinationCoords ? '✓' : ''}
               </button>
             </div>
           </div>
@@ -1257,10 +1102,7 @@ function DispatchFormContent({
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white shadow-md shadow-orange-500/30">
                   {routeEstimate.loading ? (
-                    <Loader2
-                      size={18}
-                      className="animate-spin"
-                    />
+                    <Loader2 size={18} className="animate-spin" />
                   ) : (
                     <Clock size={18} />
                   )}
@@ -1274,8 +1116,7 @@ function DispatchFormContent({
                   </div>
 
                   <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    زمان مسیر به‌صورت تخمینی محاسبه
-                    شده است
+                    زمان مسیر به‌صورت تخمینی محاسبه شده است
                   </div>
                 </div>
               </div>
@@ -1283,10 +1124,7 @@ function DispatchFormContent({
               <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400">
                 <Milestone size={16} />
 
-                <span>
-                  {routeEstimate.distanceKm}{' '}
-                  کیلومتر
-                </span>
+                <span>{routeEstimate.distanceKm} کیلومتر</span>
               </div>
             </motion.div>
           )}
@@ -1301,16 +1139,11 @@ function DispatchFormContent({
                 مختصات ثبت‌شده مبدأ
               </span>
 
-              <span
-                dir="ltr"
-                className="font-mono text-[11px]"
-              >
+              <span dir="ltr" className="font-mono text-[11px]">
                 {form.originCoords
                   ? `${form.originCoords.lat.toFixed(
                       6,
-                    )}, ${form.originCoords.lng.toFixed(
-                      6,
-                    )}`
+                    )}, ${form.originCoords.lng.toFixed(6)}`
                   : 'روی نقشه کلیک کنید'}
               </span>
             </div>
@@ -1320,16 +1153,11 @@ function DispatchFormContent({
                 مختصات ثبت‌شده مقصد
               </span>
 
-              <span
-                dir="ltr"
-                className="font-mono text-[11px]"
-              >
+              <span dir="ltr" className="font-mono text-[11px]">
                 {form.destinationCoords
                   ? `${form.destinationCoords.lat.toFixed(
                       6,
-                    )}, ${form.destinationCoords.lng.toFixed(
-                      6,
-                    )}`
+                    )}, ${form.destinationCoords.lng.toFixed(6)}`
                   : 'روی نقشه کلیک کنید'}
               </span>
             </div>
@@ -1352,18 +1180,11 @@ function DispatchFormContent({
 
           <button
             type="submit"
-            disabled={
-              isSubmitting ||
-              !form.vehicleId ||
-              !form.driverId
-            }
+            disabled={isSubmitting || !form.vehicleId || !form.driverId}
             className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? (
-              <Loader2
-                size={16}
-                className="animate-spin"
-              />
+              <Loader2 size={16} className="animate-spin" />
             ) : isEditMode ? (
               <CheckCircle2 size={16} />
             ) : (
@@ -1398,8 +1219,7 @@ export function DispatchFormModal({
   onClose,
   onSubmit,
 }: DispatchFormModalProps) {
-  const formKey =
-    `${mode}-${initialData?.id ?? 'create'}`;
+  const formKey = `${mode}-${initialData?.id ?? 'create'}`;
 
   return (
     <AnimatePresence>

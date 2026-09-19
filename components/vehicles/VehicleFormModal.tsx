@@ -15,14 +15,11 @@ import {
   Truck,
   X,
 } from 'lucide-react';
-
 import gregorian from 'react-date-object/calendars/gregorian';
 import persian from 'react-date-object/calendars/persian';
 import gregorianEn from 'react-date-object/locales/gregorian_en';
 import persianFa from 'react-date-object/locales/persian_fa';
-
 import { Controller, useForm } from 'react-hook-form';
-
 import DatePicker, { DateObject } from 'react-multi-date-picker';
 
 import {
@@ -30,7 +27,6 @@ import {
   type VehicleFormValues,
   vehicleFormSchema,
 } from '@/app/schemas/vehicle.schema';
-
 import type {
   CreateVehicleRequest,
   Vehicle,
@@ -150,25 +146,16 @@ const errorInputClassName =
 
 function toEnglishDigits(value: string): string {
   return value
-    .replace(/[۰-۹]/g, (digit) =>
-      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
-    );
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
 }
 
 function toPersianDigits(value: string): string {
-  return value.replace(
-    /\d/g,
-    (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)],
-  );
+  return value.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 }
 
 function onlyDigits(value: string, maxLength: number): string {
-  return toEnglishDigits(value)
-    .replace(/\D/g, '')
-    .slice(0, maxLength);
+  return toEnglishDigits(value).replace(/\D/g, '').slice(0, maxLength);
 }
 
 /* =========================================================
@@ -234,9 +221,7 @@ function parsePlateNumber(value: unknown): PlateParts {
    * استاندارد:
    * 12ب345-11
    */
-  const standardMatch = normalized.match(
-    /^(\d{2})([^\d-])(\d{3})-(\d{2})$/,
-  );
+  const standardMatch = normalized.match(/^(\d{2})([^\d-])(\d{3})-(\d{2})$/);
 
   if (standardMatch) {
     return {
@@ -251,9 +236,7 @@ function parsePlateNumber(value: unknown): PlateParts {
    * بدون خط تیره:
    * 12ب34511
    */
-  const noDashMatch = normalized.match(
-    /^(\d{2})([^\d])(\d{3})(\d{2})$/,
-  );
+  const noDashMatch = normalized.match(/^(\d{2})([^\d])(\d{3})(\d{2})$/);
 
   if (noDashMatch) {
     return {
@@ -283,9 +266,7 @@ function parsePlateNumber(value: unknown): PlateParts {
   /*
    * فرمت‌های قدیمی
    */
-  const flexibleMatch = normalized.match(
-    /(\d{2})([^\d-])(\d{3}).*?(\d{2})$/,
-  );
+  const flexibleMatch = normalized.match(/(\d{2})([^\d-])(\d{3}).*?(\d{2})$/);
 
   if (flexibleMatch) {
     return {
@@ -347,9 +328,7 @@ function IranianPlateInput({
   onChange,
   onBlur,
 }: IranianPlateInputProps) {
-  const [parts, setParts] = useState<PlateParts>(() =>
-    parsePlateNumber(value),
-  );
+  const [parts, setParts] = useState<PlateParts>(() => parsePlateNumber(value));
 
   /*
    * فقط وقتی مقدار بیرونی واقعاً تغییر کرده
@@ -452,9 +431,7 @@ function IranianPlateInput({
               </div>
             </div>
 
-            <div className="text-[7px] font-bold">
-              IRAN
-            </div>
+            <div className="text-[7px] font-bold">IRAN</div>
           </div>
 
           {/* Left 2 digits */}
@@ -486,10 +463,7 @@ function IranianPlateInput({
               className="h-full w-full cursor-pointer appearance-none bg-transparent px-2 text-center text-xl font-black text-neutral-900 outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
             >
               {PLATE_LETTERS.map((letter) => (
-                <option
-                  key={letter}
-                  value={letter}
-                >
+                <option key={letter} value={letter}>
                   {letter}
                 </option>
               ))}
@@ -541,10 +515,7 @@ function IranianPlateInput({
         </div>
       </div>
 
-      <div
-        dir="rtl"
-        className="flex items-center justify-between gap-3 px-1"
-      >
+      <div dir="rtl" className="flex items-center justify-between gap-3 px-1">
         <span className="text-[10px] text-neutral-400">
           مثال: ۱۲ ب ۳۴۵ ایران ۱۱
         </span>
@@ -581,15 +552,8 @@ export function VehicleFormModal({
     handleSubmit,
     reset,
     watch,
-    formState: {
-      errors,
-      isValid,
-    },
-  } = useForm<
-    VehicleFormInput,
-    unknown,
-    VehicleFormValues
-  >({
+    formState: { errors, isValid },
+  } = useForm<VehicleFormInput, unknown, VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
 
     defaultValues: getDefaultValues(initialData),
@@ -602,9 +566,7 @@ export function VehicleFormModal({
   const plateNumber = watch('plateNumber') ?? '';
 
   const plateComplete = useMemo(() => {
-    return isPlateComplete(
-      parsePlateNumber(plateNumber),
-    );
+    return isPlateComplete(parsePlateNumber(plateNumber));
   }, [plateNumber]);
 
   useEffect(() => {
@@ -625,16 +587,10 @@ export function VehicleFormModal({
     onClose();
   };
 
-  const handleFormSubmit = async (
-    data: VehicleFormValues,
-  ) => {
-    const plateParts = parsePlateNumber(
-      data.plateNumber,
-    );
+  const handleFormSubmit = async (data: VehicleFormValues) => {
+    const plateParts = parsePlateNumber(data.plateNumber);
 
-    const normalizedPlate = buildPlateNumber(
-      plateParts,
-    );
+    const normalizedPlate = buildPlateNumber(plateParts);
 
     /*
      * این حالت اصولاً به خاطر disabled بودن دکمه نباید رخ دهد.
@@ -652,15 +608,11 @@ export function VehicleFormModal({
 
       status: data.status,
 
-      insuranceNumber:
-        data.insuranceNumber?.trim?.() ??
-        data.insuranceNumber,
+      insuranceNumber: data.insuranceNumber?.trim?.() ?? data.insuranceNumber,
 
-      insuranceExpiryDate:
-        data.insuranceExpiryDate,
+      insuranceExpiryDate: data.insuranceExpiryDate,
 
-      currentDriverId:
-        data.currentDriverId,
+      currentDriverId: data.currentDriverId,
     };
 
     await onSubmit(request);
@@ -733,9 +685,7 @@ export function VehicleFormModal({
                     id="vehicle-form-title"
                     className="text-lg font-bold text-neutral-900 dark:text-white"
                   >
-                    {initialData
-                      ? 'ویرایش خودرو'
-                      : 'ثبت خودرو جدید'}
+                    {initialData ? 'ویرایش خودرو' : 'ثبت خودرو جدید'}
                   </h2>
 
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
@@ -774,11 +724,7 @@ export function VehicleFormModal({
                   name="plateNumber"
                   render={({ field }) => (
                     <IranianPlateInput
-                      value={
-                        typeof field.value === 'string'
-                          ? field.value
-                          : ''
-                      }
+                      value={typeof field.value === 'string' ? field.value : ''}
                       disabled={isSubmitting}
                       hasError={Boolean(errors.plateNumber)}
                       onChange={field.onChange}
@@ -802,9 +748,7 @@ export function VehicleFormModal({
                   placeholder="مثال: پژو پارس، ولوو FH"
                   aria-invalid={Boolean(errors.model)}
                   className={`${inputBaseClassName} ${
-                    errors.model
-                      ? errorInputClassName
-                      : normalInputClassName
+                    errors.model ? errorInputClassName : normalInputClassName
                   }`}
                   {...register('model')}
                 />
@@ -829,8 +773,7 @@ export function VehicleFormModal({
                       {vehicleTypes.map((vehicleType) => {
                         const Icon = vehicleType.icon;
 
-                        const isSelected =
-                          field.value === vehicleType.value;
+                        const isSelected = field.value === vehicleType.value;
 
                         return (
                           <button
@@ -839,9 +782,7 @@ export function VehicleFormModal({
                             role="radio"
                             disabled={isSubmitting}
                             aria-checked={isSelected}
-                            onClick={() =>
-                              field.onChange(vehicleType.value)
-                            }
+                            onClick={() => field.onChange(vehicleType.value)}
                             className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                               isSelected
                                 ? 'border-orange-500 bg-orange-50 text-orange-700 ring-4 ring-orange-500/10 dark:bg-orange-500/10 dark:text-orange-400'
@@ -850,9 +791,7 @@ export function VehicleFormModal({
                           >
                             <Icon size={21} />
 
-                            <span>
-                              {vehicleType.label}
-                            </span>
+                            <span>{vehicleType.label}</span>
                           </button>
                         );
                       })}
@@ -883,9 +822,7 @@ export function VehicleFormModal({
                     type="text"
                     disabled={isSubmitting}
                     placeholder="شماره بیمه‌نامه"
-                    aria-invalid={Boolean(
-                      errors.insuranceNumber,
-                    )}
+                    aria-invalid={Boolean(errors.insuranceNumber)}
                     className={`${inputBaseClassName} ${
                       errors.insuranceNumber
                         ? errorInputClassName
@@ -905,42 +842,30 @@ export function VehicleFormModal({
                     name="insuranceExpiryDate"
                     render={({ field }) => {
                       const insuranceExpiryDate =
-                        typeof field.value === 'string'
-                          ? field.value
-                          : '';
+                        typeof field.value === 'string' ? field.value : '';
 
                       return (
                         <DatePicker
-                          value={getPersianDateValue(
-                            insuranceExpiryDate,
-                          )}
+                          value={getPersianDateValue(insuranceExpiryDate)}
                           calendar={persian}
                           locale={persianFa}
                           format="YYYY/MM/DD"
                           calendarPosition="bottom-right"
                           editable={false}
                           onChange={(date) => {
-                            const selectedDate =
-                              Array.isArray(date)
-                                ? date[0]
-                                : date;
+                            const selectedDate = Array.isArray(date)
+                              ? date[0]
+                              : date;
 
-                            const gregorianDate =
-                              selectedDate
-                                ? selectedDate
-                                    .convert(
-                                      gregorian,
-                                      gregorianEn,
-                                    )
-                                    .format('YYYY-MM-DD')
-                                : '';
+                            const gregorianDate = selectedDate
+                              ? selectedDate
+                                  .convert(gregorian, gregorianEn)
+                                  .format('YYYY-MM-DD')
+                              : '';
 
                             field.onChange(gregorianDate);
                           }}
-                          render={(
-                            value,
-                            openCalendar,
-                          ) => (
+                          render={(value, openCalendar) => (
                             <button
                               id="insuranceExpiryDate"
                               type="button"
@@ -999,15 +924,9 @@ export function VehicleFormModal({
                     >
                       <StatusButton
                         label="فعال"
-                        icon={
-                          <CheckCircle2 size={18} />
-                        }
+                        icon={<CheckCircle2 size={18} />}
                         isSelected={field.value === 1}
-                        onClick={() =>
-                          field.onChange(
-                            1 as VehicleStatus,
-                          )
-                        }
+                        onClick={() => field.onChange(1 as VehicleStatus)}
                         disabled={isSubmitting}
                         activeClassName="border-orange-500 bg-orange-50 text-orange-700 ring-4 ring-orange-500/10 dark:bg-orange-500/10 dark:text-orange-400"
                       />
@@ -1016,11 +935,7 @@ export function VehicleFormModal({
                         label="غیرفعال"
                         icon={<X size={18} />}
                         isSelected={field.value === 0}
-                        onClick={() =>
-                          field.onChange(
-                            0 as VehicleStatus,
-                          )
-                        }
+                        onClick={() => field.onChange(0 as VehicleStatus)}
                         disabled={isSubmitting}
                         activeClassName="border-neutral-500 bg-neutral-100 text-neutral-700 dark:border-neutral-500 dark:bg-neutral-800 dark:text-neutral-200"
                       />
@@ -1043,18 +958,11 @@ export function VehicleFormModal({
 
                 <button
                   type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !isValid ||
-                    !plateComplete
-                  }
+                  disabled={isSubmitting || !isValid || !plateComplete}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3.5 text-sm font-bold text-white transition-colors hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-500/20 disabled:cursor-not-allowed disabled:bg-orange-300 disabled:opacity-60 dark:disabled:bg-orange-950"
                 >
                   {isSubmitting ? (
-                    <Loader2
-                      size={19}
-                      className="animate-spin"
-                    />
+                    <Loader2 size={19} className="animate-spin" />
                   ) : (
                     <Save size={19} />
                   )}
@@ -1078,12 +986,7 @@ export function VehicleFormModal({
    Form Field
 ========================================================= */
 
-function FormField({
-  id,
-  label,
-  error,
-  children,
-}: FormFieldProps) {
+function FormField({ id, label, error, children }: FormFieldProps) {
   return (
     <div className="space-y-2">
       <label

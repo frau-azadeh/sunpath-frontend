@@ -18,10 +18,7 @@ import {
 import { toast } from 'sonner';
 
 import { DriverStatCard } from './DriverStatCard';
-import type {
-  DriverProfile,
-  DriverRouteHistory,
-} from './driver-types';
+import type { DriverProfile, DriverRouteHistory } from './driver-types';
 
 type Props = {
   profile: DriverProfile;
@@ -38,25 +35,15 @@ type PlateParts = {
 
 const toEnglishDigits = (value: string): string => {
   return value
-    .replace(/[۰-۹]/g, (digit) =>
-      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
-    );
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
 };
 
-const toPersianDigits = (
-  value: string | number,
-): string => {
-  return String(value).replace(/\d/g, (digit) =>
-    '۰۱۲۳۴۵۶۷۸۹'[Number(digit)],
-  );
+const toPersianDigits = (value: string | number): string => {
+  return String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 };
 
-const parseIranianPlate = (
-  value?: string | null,
-): PlateParts | null => {
+const parseIranianPlate = (value?: string | null): PlateParts | null => {
   if (!value) {
     return null;
   }
@@ -73,9 +60,7 @@ const parseIranianPlate = (
    * بعد از حذف خط تیره:
    * 12ب34567
    */
-  const match = normalized.match(
-    /^(\d{2})([آ-ی])(\d{3})(\d{2})$/,
-  );
+  const match = normalized.match(/^(\d{2})([آ-ی])(\d{3})(\d{2})$/);
 
   if (!match) {
     return null;
@@ -89,9 +74,7 @@ const parseIranianPlate = (
   };
 };
 
-const formatDateTime = (
-  value?: string | null,
-): string => {
+const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return '—';
   }
@@ -111,16 +94,12 @@ const formatDateTime = (
   }).format(date);
 };
 
-const formatDuration = (
-  durationSeconds: number,
-): string => {
+const formatDuration = (durationSeconds: number): string => {
   if (!durationSeconds || durationSeconds <= 0) {
     return '—';
   }
 
-  const totalMinutes = Math.floor(
-    durationSeconds / 60,
-  );
+  const totalMinutes = Math.floor(durationSeconds / 60);
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -133,24 +112,14 @@ const formatDuration = (
     return `${toPersianDigits(hours)} ساعت`;
   }
 
-  return `${toPersianDigits(
-    hours,
-  )} ساعت و ${toPersianDigits(minutes)} دقیقه`;
+  return `${toPersianDigits(hours)} ساعت و ${toPersianDigits(minutes)} دقیقه`;
 };
 
-function IranianPlate({
-  value,
-}: {
-  value?: string | null;
-}) {
+function IranianPlate({ value }: { value?: string | null }) {
   const parts = parseIranianPlate(value);
 
   if (!value) {
-    return (
-      <span className="text-sm text-neutral-400">
-        پلاک ثبت نشده
-      </span>
-    );
+    return <span className="text-sm text-neutral-400">پلاک ثبت نشده</span>;
   }
 
   if (!parts) {
@@ -170,27 +139,17 @@ function IranianPlate({
       className="inline-flex h-12 overflow-hidden rounded-lg border-2 border-neutral-900 bg-white shadow-sm dark:border-neutral-300"
     >
       <div className="flex w-12 flex-col items-center justify-center border-r border-neutral-300 bg-blue-700 px-1 text-white">
-        <span className="text-[7px] font-bold">
-          I.R.
-        </span>
+        <span className="text-[7px] font-bold">I.R.</span>
 
-        <span className="text-[8px] font-bold">
-          IRAN
-        </span>
+        <span className="text-[8px] font-bold">IRAN</span>
       </div>
 
       <div className="flex items-center gap-2 px-3 font-black text-neutral-950">
-        <span className="text-lg">
-          {toPersianDigits(parts.left)}
-        </span>
+        <span className="text-lg">{toPersianDigits(parts.left)}</span>
 
-        <span className="text-lg">
-          {parts.letter}
-        </span>
+        <span className="text-lg">{parts.letter}</span>
 
-        <span className="text-lg">
-          {toPersianDigits(parts.middle)}
-        </span>
+        <span className="text-lg">{toPersianDigits(parts.middle)}</span>
       </div>
 
       <div className="flex min-w-14 flex-col items-center justify-center border-l border-neutral-400 px-2 text-neutral-950">
@@ -219,35 +178,21 @@ export function DriverProfileView({
             </div>
 
             <div className="min-w-0">
-              <h2 className="text-xl font-black">
-                {profile.fullName}
-              </h2>
+              <h2 className="text-xl font-black">{profile.fullName}</h2>
 
               <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                کد راننده:{' '}
-                <span dir="ltr">
-                  {profile.driverCode}
-                </span>
+                کد راننده: <span dir="ltr">{profile.driverCode}</span>
               </p>
 
               <div className="mt-3 flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-amber-400">
-                <Star
-                  size={17}
-                  fill="currentColor"
-                />
-
-                {profile.rating.toLocaleString(
-                  'fa-IR',
-                )}{' '}
-                امتیاز راننده
+                <Star size={17} fill="currentColor" />
+                {profile.rating.toLocaleString('fa-IR')} امتیاز راننده
               </div>
             </div>
           </div>
 
           <div className="mt-6">
-            <p className="text-sm font-bold">
-              اطلاعات تماس
-            </p>
+            <p className="text-sm font-bold">اطلاعات تماس</p>
 
             <div className="mt-4 flex items-center gap-3 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-neutral-500 shadow-sm dark:bg-neutral-800 dark:text-neutral-300">
@@ -259,22 +204,15 @@ export function DriverProfileView({
                   شماره همراه
                 </p>
 
-                <p
-                  dir="ltr"
-                  className="mt-1 text-right text-sm font-bold"
-                >
-                  {toPersianDigits(
-                    profile.phoneNumber,
-                  )}
+                <p dir="ltr" className="mt-1 text-right text-sm font-bold">
+                  {toPersianDigits(profile.phoneNumber)}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="mt-6">
-            <p className="text-sm font-bold">
-              خودروی فعلی
-            </p>
+            <p className="text-sm font-bold">خودروی فعلی</p>
 
             {profile.currentVehicle ? (
               <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
@@ -298,31 +236,20 @@ export function DriverProfileView({
                     </div>
                   </div>
 
-                  <IranianPlate
-                    value={
-                      profile.currentVehicle
-                        .plateNumber
-                    }
-                  />
+                  <IranianPlate value={profile.currentVehicle.plateNumber} />
                 </div>
               </div>
             ) : (
               <div className="mt-4 flex items-center gap-3 rounded-2xl border border-dashed border-neutral-300 p-4 text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
                 <CarFront size={19} />
-
-                در حال حاضر خودروی فعالی به این
-                راننده تخصیص داده نشده است.
+                در حال حاضر خودروی فعالی به این راننده تخصیص داده نشده است.
               </div>
             )}
           </div>
 
           <button
             type="button"
-            onClick={() =>
-              toast.info(
-                'ویرایش حساب راننده هنوز فعال نشده است.',
-              )
-            }
+            onClick={() => toast.info('ویرایش حساب راننده هنوز فعال نشده است.')}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
           >
             <Settings2 size={18} />
@@ -338,9 +265,7 @@ export function DriverProfileView({
               </span>
 
               <div>
-                <p className="text-sm font-bold">
-                  آمار راننده
-                </p>
+                <p className="text-sm font-bold">آمار راننده</p>
 
                 <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                   خلاصه عملکرد ثبت‌شده
@@ -352,32 +277,23 @@ export function DriverProfileView({
               <DriverStatCard
                 icon={<Truck size={17} />}
                 label="خودروی فعال"
-                value={
-                  profile.currentVehicle
-                    ? '۱'
-                    : '۰'
-                }
+                value={profile.currentVehicle ? '۱' : '۰'}
               />
 
               <DriverStatCard
                 icon={<BadgeCheck size={17} />}
                 label="مأموریت انجام‌شده"
-                value={profile.completedDispatches.toLocaleString(
-                  'fa-IR',
-                )}
+                value={profile.completedDispatches.toLocaleString('fa-IR')}
               />
             </div>
           </section>
 
           <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-sm font-bold">
-              درباره حساب کاربری
-            </p>
+            <p className="text-sm font-bold">درباره حساب کاربری</p>
 
             <p className="mt-3 text-xs leading-7 text-neutral-500 dark:text-neutral-400">
-              اطلاعات خودرو و مأموریت‌های این
-              صفحه از اطلاعات راننده و مأموریت‌های
-              ثبت‌شده در سامانه دریافت می‌شوند.
+              اطلاعات خودرو و مأموریت‌های این صفحه از اطلاعات راننده و
+              مأموریت‌های ثبت‌شده در سامانه دریافت می‌شوند.
             </p>
           </section>
         </aside>
@@ -390,13 +306,10 @@ export function DriverProfileView({
           </span>
 
           <div>
-            <h3 className="font-black">
-              تاریخچه مسیرها
-            </h3>
+            <h3 className="font-black">تاریخچه مسیرها</h3>
 
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              مأموریت‌های تکمیل‌شده و اطلاعات
-              واقعی GPS
+              مأموریت‌های تکمیل‌شده و اطلاعات واقعی GPS
             </p>
           </div>
         </div>
@@ -407,18 +320,14 @@ export function DriverProfileView({
           </div>
         ) : history.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
-            <Route
-              size={30}
-              className="mx-auto text-neutral-400"
-            />
+            <Route size={30} className="mx-auto text-neutral-400" />
 
             <p className="mt-3 text-sm font-bold">
               هنوز تاریخچه مسیری وجود ندارد.
             </p>
 
             <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-              پس از تکمیل مأموریت و ثبت GPS،
-              مسیر در این قسمت نمایش داده می‌شود.
+              پس از تکمیل مأموریت و ثبت GPS، مسیر در این قسمت نمایش داده می‌شود.
             </p>
           </div>
         ) : (
@@ -432,45 +341,33 @@ export function DriverProfileView({
                   <div>
                     <p className="font-black">
                       {item.title ||
-                        `مأموریت ${toPersianDigits(
-                          item.dispatchId,
-                        )}`}
+                        `مأموریت ${toPersianDigits(item.dispatchId)}`}
                     </p>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-500 dark:text-neutral-400">
                       <span className="flex items-center gap-1.5">
                         <CalendarDays size={15} />
 
-                        {formatDateTime(
-                          item.completedAtUtc,
-                        )}
+                        {formatDateTime(item.completedAtUtc)}
                       </span>
 
                       <span className="flex items-center gap-1.5">
                         <Gauge size={15} />
-
-                        {item.distanceKm.toLocaleString(
-                          'fa-IR',
-                          {
-                            maximumFractionDigits: 1,
-                          },
-                        )}{' '}
+                        {item.distanceKm.toLocaleString('fa-IR', {
+                          maximumFractionDigits: 1,
+                        })}{' '}
                         کیلومتر
                       </span>
 
                       <span className="flex items-center gap-1.5">
                         <Clock3 size={15} />
 
-                        {formatDuration(
-                          item.durationSeconds,
-                        )}
+                        {formatDuration(item.durationSeconds)}
                       </span>
                     </div>
                   </div>
 
-                  <IranianPlate
-                    value={item.vehiclePlate}
-                  />
+                  <IranianPlate value={item.vehiclePlate} />
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -481,9 +378,7 @@ export function DriverProfileView({
                     />
 
                     <div>
-                      <p className="text-[11px] text-neutral-500">
-                        مبدأ
-                      </p>
+                      <p className="text-[11px] text-neutral-500">مبدأ</p>
 
                       <p className="mt-1 text-sm font-bold">
                         {item.originTitle || '—'}
@@ -498,13 +393,10 @@ export function DriverProfileView({
                     />
 
                     <div>
-                      <p className="text-[11px] text-neutral-500">
-                        مقصد
-                      </p>
+                      <p className="text-[11px] text-neutral-500">مقصد</p>
 
                       <p className="mt-1 text-sm font-bold">
-                        {item.destinationTitle ||
-                          '—'}
+                        {item.destinationTitle || '—'}
                       </p>
                     </div>
                   </div>
@@ -516,10 +408,7 @@ export function DriverProfileView({
                   </span>
 
                   <span className="font-black text-neutral-800 dark:text-neutral-100">
-                    {item.points.length.toLocaleString(
-                      'fa-IR',
-                    )}{' '}
-                    نقطه
+                    {item.points.length.toLocaleString('fa-IR')} نقطه
                   </span>
                 </div>
               </article>
