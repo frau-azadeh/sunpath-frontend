@@ -8,7 +8,6 @@ import {
   Activity,
   Bell,
   Car,
-  LayoutDashboard,
   Map as MapIcon,
   Menu,
   Moon,
@@ -42,7 +41,9 @@ const EMPTY_STATS: DashboardStats = {
   bikes: 0,
 };
 
-const calculateDashboardStats = (vehicles: Vehicle[]): DashboardStats => {
+const calculateDashboardStats = (
+  vehicles: Vehicle[],
+): DashboardStats => {
   return vehicles.reduce<DashboardStats>(
     (stats, vehicle) => {
       const status = Number(vehicle.status);
@@ -60,7 +61,10 @@ const calculateDashboardStats = (vehicles: Vehicle[]): DashboardStats => {
         stats.cars += 1;
       }
 
-      if (vehicleType === 1 || vehicleType === 2) {
+      if (
+        vehicleType === 1 ||
+        vehicleType === 2
+      ) {
         stats.trucks += 1;
       }
 
@@ -75,39 +79,64 @@ const calculateDashboardStats = (vehicles: Vehicle[]): DashboardStats => {
 };
 
 export default function SunPathDashboard() {
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+  ] = useState(false);
+
   const { theme, setTheme } = useTheme();
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [statsError, setStatsError] = useState<string | null>(null);
+
+  const [
+    isLoadingStats,
+    setIsLoadingStats,
+  ] = useState(true);
+
+  const [
+    statsError,
+    setStatsError,
+  ] = useState<string | null>(null);
 
   useEffect(() => {
     void signalRService.startConnection();
 
     let isMounted = true;
 
-    const fetchInitialStats = async (): Promise<void> => {
-      try {
-        const data = await vehicleService.getAll();
+    const fetchInitialStats =
+      async (): Promise<void> => {
+        try {
+          const data =
+            await vehicleService.getAll();
 
-        if (isMounted) {
-          setVehicles(Array.isArray(data) ? data : []);
-          setStatsError(null);
-        }
-      } catch (error) {
-        console.error('Dashboard vehicles stats error:', error);
+          if (isMounted) {
+            setVehicles(
+              Array.isArray(data)
+                ? data
+                : [],
+            );
 
-        if (isMounted) {
-          setVehicles([]);
-          setStatsError('خطا در دریافت آمار خودروها');
+            setStatsError(null);
+          }
+        } catch (error) {
+          console.error(
+            'Dashboard vehicles stats error:',
+            error,
+          );
+
+          if (isMounted) {
+            setVehicles([]);
+
+            setStatsError(
+              'خطا در دریافت آمار خودروها',
+            );
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoadingStats(false);
+          }
         }
-      } finally {
-        if (isMounted) {
-          setIsLoadingStats(false);
-        }
-      }
-    };
+      };
 
     void fetchInitialStats();
 
@@ -116,18 +145,122 @@ export default function SunPathDashboard() {
     };
   }, []);
 
-  const stats = useMemo(() => calculateDashboardStats(vehicles), [vehicles]);
+  /*
+   * آمار کلی خودروها
+   */
+  const stats = useMemo(
+    () =>
+      calculateDashboardStats(
+        vehicles,
+      ),
+    [vehicles],
+  );
+
+  /*
+   * آخرین خودروی ثبت‌شده
+   *
+   * چون فعلاً فیلد createdAt در Vehicle
+   * تأیید نشده، بیشترین ID را آخرین
+   * خودروی ثبت‌شده در نظر می‌گیریم.
+   */
+  const latestVehicle =
+    useMemo<Vehicle | null>(() => {
+      if (vehicles.length === 0) {
+        return null;
+      }
+
+      return [...vehicles].sort(
+        (a, b) =>
+          Number(b.id) -
+          Number(a.id),
+      )[0];
+    }, [vehicles]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    setTheme(
+      theme === 'dark'
+        ? 'light'
+        : 'dark',
+    );
   };
 
-  const formatStatValue = (value: number): string => {
+  const formatStatValue = (
+    value: number,
+  ): string => {
     if (isLoadingStats) {
       return '...';
     }
 
     return faNumber(value);
+  };
+
+  const getVehicleStatus = (
+    vehicle: Vehicle,
+  ): string => {
+    const status =
+      Number(vehicle.status);
+
+    if (status === 1) {
+      return 'فعال';
+    }
+
+    return 'غیرفعال';
+  };
+
+  const getVehicleType = (
+    vehicle: Vehicle,
+  ): string => {
+    const vehicleType =
+      Number(vehicle.vehicleType);
+
+    switch (vehicleType) {
+      case 0:
+        return 'سواری';
+
+      case 1:
+        return 'وانت';
+
+      case 2:
+        return 'کامیون';
+
+      case 3:
+        return 'موتورسیکلت';
+
+      default:
+        return 'نامشخص';
+    }
+  };
+
+  const getVehiclePlate = (
+    vehicle: Vehicle,
+  ): string => {
+    const plate =
+      vehicle.plateNumber;
+
+    if (
+      plate == null ||
+      String(plate).trim() === ''
+    ) {
+      return '---';
+    }
+
+    return String(plate);
+  };
+
+  const getVehicleModel = (
+    vehicle: Vehicle,
+  ): string => {
+    const model =
+      vehicle.model;
+
+    if (
+      model == null ||
+      String(model).trim() === ''
+    ) {
+      return '---';
+    }
+
+    return String(model);
   };
 
   return (
@@ -139,17 +272,36 @@ export default function SunPathDashboard() {
           {mobileSidebarOpen && (
             <>
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                }}
                 className="fixed inset-0 z-40 bg-neutral-950/30 backdrop-blur-[1px] lg:hidden"
-                onClick={() => setMobileSidebarOpen(false)}
+                onClick={() =>
+                  setMobileSidebarOpen(
+                    false,
+                  )
+                }
               />
 
               <motion.aside
-                initial={{ x: 320, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 320, opacity: 0 }}
+                initial={{
+                  x: 320,
+                  opacity: 0,
+                }}
+                animate={{
+                  x: 0,
+                  opacity: 1,
+                }}
+                exit={{
+                  x: 320,
+                  opacity: 0,
+                }}
                 transition={{
                   type: 'spring',
                   stiffness: 260,
@@ -157,7 +309,13 @@ export default function SunPathDashboard() {
                 }}
                 className="fixed right-4 top-4 z-50 flex h-[calc(100vh-2rem)] w-72 flex-col rounded-3xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 lg:hidden"
               >
-                <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
+                <Sidebar
+                  onNavigate={() =>
+                    setMobileSidebarOpen(
+                      false,
+                    )
+                  }
+                />
               </motion.aside>
             </>
           )}
@@ -165,9 +323,13 @@ export default function SunPathDashboard() {
 
         <section className="flex min-w-0 flex-1 flex-col gap-4">
           <Header
-            onMenuClick={() => setMobileSidebarOpen(true)}
+            onMenuClick={() =>
+              setMobileSidebarOpen(true)
+            }
             theme={theme}
-            onThemeToggle={toggleTheme}
+            onThemeToggle={
+              toggleTheme
+            }
           />
 
           {statsError && (
@@ -179,53 +341,82 @@ export default function SunPathDashboard() {
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="کل خودروها"
-              value={formatStatValue(stats.total)}
+              value={formatStatValue(
+                stats.total,
+              )}
               icon={<Car size={18} />}
             />
 
             <StatCard
               title="خودروهای فعال"
-              value={formatStatValue(stats.active)}
-              icon={<Activity size={18} />}
+              value={formatStatValue(
+                stats.active,
+              )}
+              icon={
+                <Activity
+                  size={18}
+                />
+              }
             />
 
             <StatCard
               title="وانت و کامیون"
-              value={formatStatValue(stats.trucks)}
-              icon={<Truck size={18} />}
+              value={formatStatValue(
+                stats.trucks,
+              )}
+              icon={
+                <Truck size={18} />
+              }
             />
 
             <StatCard
               title="غیرفعال"
-              value={formatStatValue(stats.inactive)}
+              value={formatStatValue(
+                stats.inactive,
+              )}
               icon={<Bell size={18} />}
             />
           </section>
 
           <section className="grid min-w-0 flex-1 gap-4 xl:grid-cols-[1fr_320px]">
+            {/* نقشه زنده */}
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
+              initial={{
+                opacity: 0,
+                y: 8,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.25,
+              }}
               className="min-w-0 overflow-hidden rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
             >
               <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl border border-neutral-200 p-2 dark:border-neutral-800">
-                    <MapIcon size={18} />
+                    <MapIcon
+                      size={18}
+                    />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">نقشه زنده</h3>
+                    <h3 className="font-semibold">
+                      نقشه زنده
+                    </h3>
 
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                      نمایش موقعیت خودروها و حرکت لحظه‌ای
+                      نمایش موقعیت خودروها
+                      و حرکت لحظه‌ای
                     </p>
                   </div>
                 </div>
 
                 <div className="hidden items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 md:flex">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
+
                   اتصال فعال
                 </div>
               </div>
@@ -235,40 +426,129 @@ export default function SunPathDashboard() {
               </div>
             </motion.div>
 
+            {/* ستون اطلاعات سمت راست */}
             <motion.aside
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.05 }}
+              initial={{
+                opacity: 0,
+                y: 8,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.25,
+                delay: 0.05,
+              }}
               className="flex min-h-0 flex-col gap-4"
             >
+              {/* آخرین خودروی ثبت شده */}
               <PanelCard
-                title="وضعیت سیستم"
-                icon={<LayoutDashboard size={18} />}
+                title="آخرین خودروی ثبت‌شده"
+                icon={<Car size={18} />}
               >
-                <PanelRow label="SignalR" value="Connected" />
+                {isLoadingStats ? (
+                  <>
+                    <PanelRow
+                      label="پلاک"
+                      value="..."
+                    />
 
-                <PanelRow
-                  label="API"
-                  value={statsError ? 'Error' : 'Healthy'}
-                />
+                    <PanelRow
+                      label="مدل"
+                      value="..."
+                    />
 
-                <PanelRow
-                  label="Vehicles"
-                  value={formatStatValue(stats.total)}
-                />
+                    <PanelRow
+                      label="نوع خودرو"
+                      value="..."
+                    />
+
+                    <PanelRow
+                      label="وضعیت"
+                      value="..."
+                    />
+                  </>
+                ) : latestVehicle ? (
+                  <>
+                    <PanelRow
+                      label="پلاک"
+                      value={getVehiclePlate(
+                        latestVehicle,
+                      )}
+                    />
+
+                    <PanelRow
+                      label="مدل"
+                      value={getVehicleModel(
+                        latestVehicle,
+                      )}
+                    />
+
+                    <PanelRow
+                      label="نوع خودرو"
+                      value={getVehicleType(
+                        latestVehicle,
+                      )}
+                    />
+
+                    <PanelRow
+                      label="وضعیت"
+                      value={getVehicleStatus(
+                        latestVehicle,
+                      )}
+                    />
+                  </>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center dark:border-neutral-800">
+                    <Car
+                      size={28}
+                      className="mx-auto mb-3 text-neutral-400"
+                    />
+
+                    <p className="text-sm font-medium">
+                      هنوز خودرویی ثبت
+                      نشده است.
+                    </p>
+
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      پس از ثبت خودرو،
+                      اطلاعات آن در این
+                      قسمت نمایش داده
+                      می‌شود.
+                    </p>
+                  </div>
+                )}
               </PanelCard>
 
-              <PanelCard title="خلاصه ناوگان" icon={<Activity size={18} />}>
-                <PanelRow label="سواری" value={formatStatValue(stats.cars)} />
+              {/* خلاصه ناوگان */}
+              <PanelCard
+                title="خلاصه ناوگان"
+                icon={
+                  <Activity
+                    size={18}
+                  />
+                }
+              >
+                <PanelRow
+                  label="سواری"
+                  value={formatStatValue(
+                    stats.cars,
+                  )}
+                />
 
                 <PanelRow
                   label="وانت / کامیون"
-                  value={formatStatValue(stats.trucks)}
+                  value={formatStatValue(
+                    stats.trucks,
+                  )}
                 />
 
                 <PanelRow
                   label="موتورسیکلت"
-                  value={formatStatValue(stats.bikes)}
+                  value={formatStatValue(
+                    stats.bikes,
+                  )}
                 />
               </PanelCard>
             </motion.aside>
@@ -279,7 +559,9 @@ export default function SunPathDashboard() {
   );
 }
 
-/* ------------------------------ Sidebar ------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Sidebar                                                            */
+/* ------------------------------------------------------------------ */
 
 function DesktopSidebar() {
   return (
@@ -289,7 +571,9 @@ function DesktopSidebar() {
   );
 }
 
-/* ------------------------------ Header ------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Header                                                             */
+/* ------------------------------------------------------------------ */
 
 function Header({
   onMenuClick,
@@ -314,7 +598,8 @@ function Header({
 
         <div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 md:text-xl">
-            مدیریت لحظه‌ای ناوگان و شبیه‌سازی
+            مدیریت لحظه‌ای ناوگان و
+            شبیه‌سازی
           </p>
         </div>
       </div>
@@ -326,14 +611,20 @@ function Header({
           aria-label="تغییر حالت نمایش"
           className="rounded-xl border border-neutral-200 p-2 text-neutral-700 dark:border-neutral-800 dark:text-neutral-200"
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? (
+            <Sun size={18} />
+          ) : (
+            <Moon size={18} />
+          )}
         </button>
 
         <div className="hidden items-center gap-3 rounded-xl border border-neutral-200 px-3 py-2 dark:border-neutral-800 md:flex">
           <div className="h-8 w-8 rounded-full border border-neutral-300 bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800" />
 
           <div className="text-right">
-            <p className="text-sm font-medium leading-4">Azadeh</p>
+            <p className="text-sm font-medium leading-4">
+              Azadeh
+            </p>
 
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
               Admin
@@ -345,7 +636,9 @@ function Header({
   );
 }
 
-/* --------------------------- Small helpers --------------------------- */
+/* ------------------------------------------------------------------ */
+/* Stat Card                                                          */
+/* ------------------------------------------------------------------ */
 
 function StatCard({
   title,
@@ -358,8 +651,12 @@ function StatCard({
 }) {
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.15 }}
+      whileHover={{
+        y: -2,
+      }}
+      transition={{
+        duration: 0.15,
+      }}
       className="rounded-3xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900"
     >
       <div className="flex items-start justify-between gap-3">
@@ -368,7 +665,9 @@ function StatCard({
             {title}
           </p>
 
-          <p className="mt-2 text-2xl font-bold">{value}</p>
+          <p className="mt-2 text-2xl font-bold">
+            {value}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-neutral-200 p-3 text-orange-500 dark:border-neutral-800">
@@ -378,6 +677,10 @@ function StatCard({
     </motion.div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Panel Card                                                         */
+/* ------------------------------------------------------------------ */
 
 function PanelCard({
   title,
@@ -395,22 +698,41 @@ function PanelCard({
           {icon}
         </span>
 
-        <h4 className="font-semibold">{title}</h4>
+        <h4 className="font-semibold">
+          {title}
+        </h4>
       </div>
 
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-3">
+        {children}
+      </div>
     </div>
   );
 }
 
-function PanelRow({ label, value }: { label: string; value: string }) {
+/* ------------------------------------------------------------------ */
+/* Panel Row                                                          */
+/* ------------------------------------------------------------------ */
+
+function PanelRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
-      <span className="text-sm text-neutral-500 dark:text-neutral-400">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
+      <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
         {label}
       </span>
 
-      <span className="text-sm font-medium">{value}</span>
+      <span
+        className="min-w-0 truncate text-left text-sm font-medium"
+        title={value}
+      >
+        {value}
+      </span>
     </div>
   );
 }
