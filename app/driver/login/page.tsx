@@ -1,19 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { motion } from 'framer-motion';
 import {
-  Navigation,
-  KeyRound,
-  Phone,
   AlertCircle,
-  Loader2,
   ArrowLeft,
+  KeyRound,
+  Loader2,
+  Navigation,
+  Phone,
   ShieldCheck,
 } from 'lucide-react';
-import { useDriverAuthStore } from '@/store/useDriverAuthStore';
+
 import { driverAuthService } from '@/services/driverAuthService';
+import { useDriverAuthStore } from '@/store/useDriverAuthStore';
 
 export default function DriverLoginPage() {
   const router = useRouter();
@@ -37,7 +40,9 @@ export default function DriverLoginPage() {
         // هدایت مستقیم به صفحه کابین راننده
         router.push('/driver/dispatch');
       } else {
-        setErrorMessage(result.message || 'شماره تماس یا رمز عبور نامعتبر است.');
+        setErrorMessage(
+          result.message || 'شماره تماس یا رمز عبور نامعتبر است.',
+        );
       }
     } catch {
       setErrorMessage('خطا در برقراری ارتباط با سرور دیسپچ.');

@@ -97,18 +97,34 @@ const dispatchService = {
   },
 
   async update(id: number, data: CreateDispatchRequest): Promise<Dispatch> {
-    const response = await fetch(buildUrl(`/api/dispatches/${id}`), { method: 'PUT', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if (!response.ok) throw new Error(await getErrorMessage(response, 'ویرایش مأموریت انجام نشد.'));
+    const response = await fetch(buildUrl(`/api/dispatches/${id}`), {
+      method: 'PUT',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok)
+      throw new Error(
+        await getErrorMessage(response, 'ویرایش مأموریت انجام نشد.'),
+      );
     return response.json();
   },
 
   async getActiveForDriver(driverId: number): Promise<Dispatch | null> {
-    const response = await fetch(buildUrl(`/api/dispatches/driver/${driverId}/active`), {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
-    if (!response.ok) throw new Error(await getErrorMessage(response, 'دریافت مأموریت فعال انجام نشد.'));
+    const response = await fetch(
+      buildUrl(`/api/dispatches/driver/${driverId}/active`),
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      },
+    );
+    if (!response.ok)
+      throw new Error(
+        await getErrorMessage(response, 'دریافت مأموریت فعال انجام نشد.'),
+      );
     return response.json();
   },
 

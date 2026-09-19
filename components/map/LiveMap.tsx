@@ -4,15 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-import {
-  Compass,
-  Gauge,
-  MapPin,
-  Navigation,
-  X,
-} from 'lucide-react';
-
+import { Compass, Gauge, MapPin, Navigation, X } from 'lucide-react';
 import {
   MapContainer,
   Marker,
@@ -25,7 +17,6 @@ import {
 import { signalRService } from '@/services/signalrService';
 import { useDispatchStore } from '@/store/dispatch-store';
 import { useVehicleStore } from '@/store/useVehicleStore';
-
 import type { Dispatch } from '@/types/dispatch';
 import type { Vehicle } from '@/types/fleet';
 
@@ -56,11 +47,9 @@ if (typeof window !== 'undefined') {
     iconRetinaUrl:
       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
 
-    iconUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
 
-    shadowUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
 
@@ -124,10 +113,7 @@ function isActiveDispatch(dispatch: Dispatch): boolean {
   );
 }
 
-function getVehicleLabel(
-  vehicle: Vehicle | null,
-  mission: Dispatch,
-): string {
+function getVehicleLabel(vehicle: Vehicle | null, mission: Dispatch): string {
   if (vehicle?.plateNumber) {
     return vehicle.plateNumber;
   }
@@ -290,9 +276,7 @@ export default function LiveMap() {
 
   const loadVehicles = useVehicleStore((state) => state.loadVehicles);
 
-  const selectedVehicleId = useVehicleStore(
-    (state) => state.selectedVehicleId,
-  );
+  const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
 
   const setSelectedVehicleId = useVehicleStore(
     (state) => state.setSelectedVehicleId,
@@ -307,9 +291,7 @@ export default function LiveMap() {
 
   const dispatches = useDispatchStore((state) => state.dispatches);
 
-  const fetchDispatches = useDispatchStore(
-    (state) => state.fetchDispatches,
-  );
+  const fetchDispatches = useDispatchStore((state) => state.fetchDispatches);
 
   /* =======================================================
      UI
@@ -322,10 +304,7 @@ export default function LiveMap() {
   ======================================================= */
 
   useEffect(() => {
-    void Promise.allSettled([
-      loadVehicles(),
-      fetchDispatches(),
-    ]);
+    void Promise.allSettled([loadVehicles(), fetchDispatches()]);
 
     void signalRService.startConnection().catch((error) => {
       console.error('[LiveMap] SignalR:', error);
@@ -342,13 +321,10 @@ export default function LiveMap() {
     return activeDispatches.map((mission) => {
       const vehicle =
         vehicles.find(
-          (item) =>
-            String(item.id) === String(mission.vehicleId),
+          (item) => String(item.id) === String(mission.vehicleId),
         ) ?? null;
 
-      const vehiclePosition = vehicle
-        ? getVehiclePosition(vehicle)
-        : null;
+      const vehiclePosition = vehicle ? getVehiclePosition(vehicle) : null;
 
       const origin = getPosition(
         mission.originLatitude,
@@ -410,9 +386,7 @@ export default function LiveMap() {
     return (
       missionItems.find(
         (item) =>
-          item.vehicle &&
-          String(item.vehicle.id) ===
-            String(selectedVehicleId),
+          item.vehicle && String(item.vehicle.id) === String(selectedVehicleId),
       ) ?? null
     );
   }, [missionItems, selectedVehicleId]);
@@ -452,12 +426,7 @@ export default function LiveMap() {
         ================================================= */}
 
         {missionItems.map((item) => {
-          const {
-            mission,
-            vehicle,
-            origin,
-            destination,
-          } = item;
+          const { mission, vehicle, origin, destination } = item;
 
           const plate = getVehicleLabel(vehicle, mission);
 
@@ -481,29 +450,18 @@ export default function LiveMap() {
               {origin && (
                 <Marker
                   position={origin}
-                  icon={createMissionIcon(
-                    'origin',
-                    plate,
-                    mission.id,
-                  )}
+                  icon={createMissionIcon('origin', plate, mission.id)}
                   zIndexOffset={800}
                 >
                   <Popup>
-                    <div
-                      dir="rtl"
-                      className="min-w-[180px] text-right text-xs"
-                    >
+                    <div dir="rtl" className="min-w-[180px] text-right text-xs">
                       <strong className="mb-1 block text-emerald-600">
                         مبدأ مأموریت
                       </strong>
 
-                      <div>
-                        {mission.originTitle || 'مبدأ مأموریت'}
-                      </div>
+                      <div>{mission.originTitle || 'مبدأ مأموریت'}</div>
 
-                      <div className="mt-2 text-neutral-500">
-                        {plate}
-                      </div>
+                      <div className="mt-2 text-neutral-500">{plate}</div>
 
                       <div className="text-neutral-400">
                         مأموریت #{mission.id}
@@ -518,29 +476,18 @@ export default function LiveMap() {
               {destination && (
                 <Marker
                   position={destination}
-                  icon={createMissionIcon(
-                    'destination',
-                    plate,
-                    mission.id,
-                  )}
+                  icon={createMissionIcon('destination', plate, mission.id)}
                   zIndexOffset={800}
                 >
                   <Popup>
-                    <div
-                      dir="rtl"
-                      className="min-w-[180px] text-right text-xs"
-                    >
+                    <div dir="rtl" className="min-w-[180px] text-right text-xs">
                       <strong className="mb-1 block text-rose-600">
                         مقصد مأموریت
                       </strong>
 
-                      <div>
-                        {mission.destinationTitle || 'مقصد مأموریت'}
-                      </div>
+                      <div>{mission.destinationTitle || 'مقصد مأموریت'}</div>
 
-                      <div className="mt-2 text-neutral-500">
-                        {plate}
-                      </div>
+                      <div className="mt-2 text-neutral-500">{plate}</div>
 
                       <div className="text-neutral-400">
                         مأموریت #{mission.id}
@@ -576,8 +523,7 @@ export default function LiveMap() {
       ================================================= */}
 
       <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs shadow">
-        مأموریت فعال:{' '}
-        <strong>{missionItems.length}</strong>
+        مأموریت فعال: <strong>{missionItems.length}</strong>
       </div>
 
       {/* =================================================
@@ -589,9 +535,7 @@ export default function LiveMap() {
           type="button"
           onClick={() => setFilter('all')}
           className={`rounded-lg px-3 py-1.5 text-xs ${
-            filter === 'all'
-              ? 'bg-neutral-900 text-white'
-              : 'text-neutral-600'
+            filter === 'all' ? 'bg-neutral-900 text-white' : 'text-neutral-600'
           }`}
         >
           همه
@@ -630,10 +574,7 @@ export default function LiveMap() {
         <div className="absolute bottom-4 left-4 z-[1000] w-80 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl">
           <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-2">
             <div className="flex items-center gap-2">
-              <Navigation
-                size={16}
-                className="text-orange-500"
-              />
+              <Navigation size={16} className="text-orange-500" />
 
               <strong className="text-sm">
                 {selectedItem.vehicle.plateNumber ||
@@ -641,10 +582,7 @@ export default function LiveMap() {
               </strong>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedVehicleId(null)}
-            >
+            <button type="button" onClick={() => setSelectedVehicleId(null)}>
               <X size={16} />
             </button>
           </div>
@@ -655,24 +593,13 @@ export default function LiveMap() {
 
           <div className="mb-3 grid grid-cols-2 gap-2">
             <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
-              <Gauge
-                size={14}
-                className="text-orange-500"
-              />
-
+              <Gauge size={14} className="text-orange-500" />
               {Number(selectedItem.vehicle.speed ?? 0)} km/h
             </div>
 
             <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
-              <Compass
-                size={14}
-                className="text-orange-500"
-              />
-
-              {Math.round(
-                Number(selectedItem.vehicle.heading ?? 0),
-              )}
-              °
+              <Compass size={14} className="text-orange-500" />
+              {Math.round(Number(selectedItem.vehicle.heading ?? 0))}°
             </div>
           </div>
 
@@ -683,8 +610,7 @@ export default function LiveMap() {
             </div>
 
             <div className="mt-1 text-xs text-neutral-700">
-              {selectedItem.mission.originTitle ||
-                'مبدأ مأموریت'}
+              {selectedItem.mission.originTitle || 'مبدأ مأموریت'}
             </div>
           </div>
 
@@ -695,8 +621,7 @@ export default function LiveMap() {
             </div>
 
             <div className="mt-1 text-xs text-neutral-700">
-              {selectedItem.mission.destinationTitle ||
-                'مقصد مأموریت'}
+              {selectedItem.mission.destinationTitle || 'مقصد مأموریت'}
             </div>
           </div>
         </div>

@@ -1,5 +1,10 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { dispatchService } from '@/services/dispatchService';
+import type { Dispatch } from '@/types/dispatch';
+
 declare global {
   interface Window {
     CONFIG?: {
@@ -7,16 +12,6 @@ declare global {
     };
   }
 }
-
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-
-import type { Dispatch } from '@/types/dispatch';
-import { dispatchService } from '@/services/dispatchService';
 
 /* =========================================================
    Types
@@ -38,10 +33,7 @@ export interface ActiveMission {
   destinationLat: number;
   destinationLng: number;
 
-  status:
-    | 'assigned'
-    | 'in_progress'
-    | 'completed';
+  status: 'assigned' | 'in_progress' | 'completed';
 
   vehicleId: number;
   driverId: number | null;
@@ -74,10 +66,7 @@ const IDLE_FUEL_PER_HOUR = 1.1;
    Helpers
 ========================================================= */
 
-const isValidCoordinate = (
-  lat: number,
-  lng: number
-): boolean => {
+const isValidCoordinate = (lat: number, lng: number): boolean => {
   return (
     Number.isFinite(lat) &&
     Number.isFinite(lng) &&
@@ -92,48 +81,28 @@ const isValidCoordinate = (
 /**
  * فاصله دو نقطه GPS با فرمول Haversine
  */
-const distanceKm = (
-  a: RouteCoord,
-  b: RouteCoord
-): number => {
+const distanceKm = (a: RouteCoord, b: RouteCoord): number => {
   const R = 6371;
 
-  const dLat =
-    ((b.lat - a.lat) * Math.PI) /
-    180;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
 
-  const dLon =
-    ((b.lng - a.lng) * Math.PI) /
-    180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
 
-  const lat1 =
-    (a.lat * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
 
-  const lat2 =
-    (b.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
 
   const x =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) *
-      Math.cos(lat2) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
 
-  return (
-    R *
-    2 *
-    Math.atan2(
-      Math.sqrt(x),
-      Math.sqrt(1 - x)
-    )
-  );
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 };
 
 /**
  * Dispatch -> ActiveMission
  */
-export const toMission = (
-  d: Dispatch | null
-): ActiveMission | null => {
+export const toMission = (d: Dispatch | null): ActiveMission | null => {
   if (!d) {
     return null;
   }
@@ -149,41 +118,24 @@ export const toMission = (
     return null;
   }
 
-  const originLat = Number(
-    d.originLatitude
-  );
+  const originLat = Number(d.originLatitude);
 
-  const originLng = Number(
-    d.originLongitude
-  );
+  const originLng = Number(d.originLongitude);
 
-  const destinationLat = Number(
-    d.destinationLatitude
-  );
+  const destinationLat = Number(d.destinationLatitude);
 
-  const destinationLng = Number(
-    d.destinationLongitude
-  );
+  const destinationLng = Number(d.destinationLongitude);
 
   if (
-    !isValidCoordinate(
-      originLat,
-      originLng
-    ) ||
-    !isValidCoordinate(
-      destinationLat,
-      destinationLng
-    )
+    !isValidCoordinate(originLat, originLng) ||
+    !isValidCoordinate(destinationLat, destinationLng)
   ) {
     return null;
   }
 
-  const rawStatus = String(
-    d.status ?? ''
-  ).toLowerCase();
+  const rawStatus = String(d.status ?? '').toLowerCase();
 
-  let status: ActiveMission['status'] =
-    'assigned';
+  let status: ActiveMission['status'] = 'assigned';
 
   if (
     rawStatus === '2' ||
@@ -203,25 +155,16 @@ export const toMission = (
   return {
     id: Number(d.id),
 
-    vehicleId: Number(
-      d.vehicleId
-    ),
+    vehicleId: Number(d.vehicleId),
 
-    driverId:
-      d.driverId != null
-        ? Number(d.driverId)
-        : null,
+    driverId: d.driverId != null ? Number(d.driverId) : null,
 
-    originName:
-      d.originTitle ||
-      'مبدأ مأموریت',
+    originName: d.originTitle || 'مبدأ مأموریت',
 
     originLat,
     originLng,
 
-    destinationName:
-      d.destinationTitle ||
-      'مقصد مأموریت',
+    destinationName: d.destinationTitle || 'مقصد مأموریت',
 
     destinationLat,
     destinationLng,
@@ -236,105 +179,69 @@ export const toMission = (
 
 export function useDriverNavigation(
   mission: ActiveMission | null,
-  driverId: number
+  driverId: number,
 ) {
   /* ---------------------------------------------------------
      State
   --------------------------------------------------------- */
 
-  const [
-    currentLocation,
-    setCurrentLocation,
-  ] =
-    useState<RouteCoord | null>(
-      null
-    );
+  const [currentLocation, setCurrentLocation] = useState<RouteCoord | null>(
+    null,
+  );
 
-  const [
-    routeCoordinates,
-    setRouteCoordinates,
-  ] = useState<RouteCoord[]>([]);
+  const [routeCoordinates, setRouteCoordinates] = useState<RouteCoord[]>([]);
 
-  const [
-    isDriving,
-    setIsDriving,
-  ] = useState(false);
+  const [isDriving, setIsDriving] = useState(false);
 
-  const [
-    gpsError,
-    setGpsError,
-  ] =
-    useState<string | null>(
-      null
-    );
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
-  const [
-    stats,
-    setStats,
-  ] =
-    useState<LiveTripStats>({
-      currentSpeed: 0,
-      heading: 0,
+  const [stats, setStats] = useState<LiveTripStats>({
+    currentSpeed: 0,
+    heading: 0,
 
-      totalDistanceKm: 0,
+    totalDistanceKm: 0,
 
-      durationSeconds: 0,
-      stopDurationSeconds: 0,
+    durationSeconds: 0,
+    stopDurationSeconds: 0,
 
-      fuelConsumedLiters: 0,
+    fuelConsumedLiters: 0,
 
-      efficiencyScore: 100,
-    });
+    efficiencyScore: 100,
+  });
 
   /* ---------------------------------------------------------
      Refs
   --------------------------------------------------------- */
 
-  const watchId =
-    useRef<number | null>(
-      null
-    );
+  const watchId = useRef<number | null>(null);
 
-  const lastPoint =
-    useRef<RouteCoord | null>(
-      null
-    );
+  const lastPoint = useRef<RouteCoord | null>(null);
 
-  const startedAt =
-    useRef<number | null>(
-      null
-    );
+  const startedAt = useRef<number | null>(null);
 
-  const lastTelemetryAt =
-    useRef<number | null>(
-      null
-    );
+  const lastTelemetryAt = useRef<number | null>(null);
 
-  const stopSeconds =
-    useRef(0);
+  const stopSeconds = useRef(0);
 
-  const lastHeading =
-    useRef(0);
+  const lastHeading = useRef(0);
 
   /*
    * برای جلوگیری از ارسال همزمان چند درخواست GPS
    */
-  const sendingRef =
-    useRef(false);
+  const sendingRef = useRef(false);
 
   /*
    * آخرین GPS دریافت‌شده.
    * اگر هنگام ارسال قبلی GPS جدید برسد،
    * بعد از پایان درخواست ارسال خواهد شد.
    */
-  const pendingLocationRef =
-    useRef<{
-      lat: number;
-      lng: number;
-      speed: number;
-      heading: number;
-      accuracy: number | null;
-    } | null>(null);
+  const pendingLocationRef = useRef<{
+    lat: number;
+    lng: number;
+    speed: number;
+    heading: number;
+    accuracy: number | null;
+  } | null>(null);
 
   /* =========================================================
      Reset when mission changes
@@ -342,18 +249,13 @@ export function useDriverNavigation(
 
   useEffect(() => {
     if (!mission) {
-      setCurrentLocation(
-        null
-      );
+      setCurrentLocation(null);
 
-      setRouteCoordinates(
-        []
-      );
+      setRouteCoordinates([]);
 
       setIsDriving(false);
 
-      lastPoint.current =
-        null;
+      lastPoint.current = null;
 
       return;
     }
@@ -363,24 +265,17 @@ export function useDriverNavigation(
       lng: mission.originLng,
     };
 
-    setCurrentLocation(
-      origin
-    );
+    setCurrentLocation(origin);
 
-    lastPoint.current =
-      origin;
+    lastPoint.current = origin;
 
-    lastHeading.current =
-      0;
+    lastHeading.current = 0;
 
-    stopSeconds.current =
-      0;
+    stopSeconds.current = 0;
 
-    startedAt.current =
-      null;
+    startedAt.current = null;
 
-    lastTelemetryAt.current =
-      null;
+    lastTelemetryAt.current = null;
 
     setStats({
       currentSpeed: 0,
@@ -400,10 +295,7 @@ export function useDriverNavigation(
      * اگر مأموریت قبلاً Started شده باشد،
      * GPS Tracking را فعال کن.
      */
-    setIsDriving(
-      mission.status ===
-        'in_progress'
-    );
+    setIsDriving(mission.status === 'in_progress');
   }, [mission?.id]);
 
   /*
@@ -414,23 +306,14 @@ export function useDriverNavigation(
       return;
     }
 
-    if (
-      mission.status ===
-      'in_progress'
-    ) {
+    if (mission.status === 'in_progress') {
       setIsDriving(true);
     }
 
-    if (
-      mission.status ===
-      'completed'
-    ) {
+    if (mission.status === 'completed') {
       setIsDriving(false);
     }
-  }, [
-    mission?.id,
-    mission?.status,
-  ]);
+  }, [mission?.id, mission?.status]);
 
   /* =========================================================
      Get road route from OSRM
@@ -441,133 +324,76 @@ export function useDriverNavigation(
 
   useEffect(() => {
     if (!mission) {
-      setRouteCoordinates(
-        []
-      );
+      setRouteCoordinates([]);
 
       return;
     }
 
     let cancelled = false;
 
-    const fetchRoute =
-      async () => {
-        try {
-          const url =
-            `https://router.project-osrm.org/route/v1/driving/` +
-            `${mission.originLng},${mission.originLat};` +
-            `${mission.destinationLng},${mission.destinationLat}` +
-            `?overview=full&geometries=geojson`;
+    const fetchRoute = async () => {
+      try {
+        const url =
+          `https://router.project-osrm.org/route/v1/driving/` +
+          `${mission.originLng},${mission.originLat};` +
+          `${mission.destinationLng},${mission.destinationLat}` +
+          `?overview=full&geometries=geojson`;
 
-          const response =
-            await fetch(url);
+        const response = await fetch(url);
 
-          if (
-            !response.ok
-          ) {
-            throw new Error(
-              `OSRM ${response.status}`
-            );
-          }
-
-          const data =
-            await response.json();
-
-          const coordinates =
-            data?.routes?.[0]
-              ?.geometry
-              ?.coordinates;
-
-          if (
-            cancelled
-          ) {
-            return;
-          }
-
-          if (
-            Array.isArray(
-              coordinates
-            ) &&
-            coordinates.length >
-              0
-          ) {
-            const route: RouteCoord[] =
-              coordinates
-                .map(
-                  (
-                    c: [
-                      number,
-                      number
-                    ]
-                  ) => ({
-                    lat: Number(
-                      c[1]
-                    ),
-
-                    lng: Number(
-                      c[0]
-                    ),
-                  })
-                )
-                .filter(
-                  (
-                    p: RouteCoord
-                  ) =>
-                    isValidCoordinate(
-                      p.lat,
-                      p.lng
-                    )
-                );
-
-            setRouteCoordinates(
-              route
-            );
-
-            return;
-          }
-
-          throw new Error(
-            'No route returned'
-          );
-        } catch (
-          error
-        ) {
-          console.warn(
-            'Route service error:',
-            error
-          );
-
-          if (
-            cancelled
-          ) {
-            return;
-          }
-
-          /*
-           * fallback:
-           * خط مستقیم مبدأ -> مقصد
-           */
-          setRouteCoordinates(
-            [
-              {
-                lat:
-                  mission.originLat,
-
-                lng:
-                  mission.originLng,
-              },
-
-              {
-                lat:
-                  mission.destinationLat,
-
-                lng:
-                  mission.destinationLng,
-              },
-            ]
-          );
+        if (!response.ok) {
+          throw new Error(`OSRM ${response.status}`);
         }
-      };
+
+        const data = await response.json();
+
+        const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (Array.isArray(coordinates) && coordinates.length > 0) {
+          const route: RouteCoord[] = coordinates
+            .map((c: [number, number]) => ({
+              lat: Number(c[1]),
+
+              lng: Number(c[0]),
+            }))
+            .filter((p: RouteCoord) => isValidCoordinate(p.lat, p.lng));
+
+          setRouteCoordinates(route);
+
+          return;
+        }
+
+        throw new Error('No route returned');
+      } catch (error) {
+        console.warn('Route service error:', error);
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * fallback:
+         * خط مستقیم مبدأ -> مقصد
+         */
+        setRouteCoordinates([
+          {
+            lat: mission.originLat,
+
+            lng: mission.originLng,
+          },
+
+          {
+            lat: mission.destinationLat,
+
+            lng: mission.destinationLng,
+          },
+        ]);
+      }
+    };
 
     void fetchRoute();
 
@@ -586,282 +412,163 @@ export function useDriverNavigation(
      Send GPS to Backend
   ========================================================= */
 
-  const sendLocation =
-    useCallback(
-      async (
-        lat: number,
-        lng: number,
-        speed: number,
-        heading: number,
-        accuracy: number | null
-      ) => {
-        if (!mission) {
-          return;
-        }
+  const sendLocation = useCallback(
+    async (
+      lat: number,
+      lng: number,
+      speed: number,
+      heading: number,
+      accuracy: number | null,
+    ) => {
+      if (!mission) {
+        return;
+      }
 
-        if (
-          !isValidCoordinate(
-            lat,
-            lng
-          )
-        ) {
-          console.warn(
-            'Invalid GPS coordinate:',
-            {
-              lat,
-              lng,
-            }
-          );
-
-          return;
-        }
-
-        /*
-         * UI خودرو راننده فوراً
-         * آپدیت شود.
-         */
-        setCurrentLocation({
+      if (!isValidCoordinate(lat, lng)) {
+        console.warn('Invalid GPS coordinate:', {
           lat,
           lng,
         });
 
-        /*
-         * اگر درخواست قبلی هنوز
-         * در حال ارسال است،
-         * جدیدترین GPS را نگه می‌داریم.
-         */
-        if (
-          sendingRef.current
-        ) {
-          pendingLocationRef.current =
-            {
-              lat,
-              lng,
-              speed,
-              heading,
-              accuracy,
-            };
+        return;
+      }
 
-          return;
+      /*
+       * UI خودرو راننده فوراً
+       * آپدیت شود.
+       */
+      setCurrentLocation({
+        lat,
+        lng,
+      });
+
+      /*
+       * اگر درخواست قبلی هنوز
+       * در حال ارسال است،
+       * جدیدترین GPS را نگه می‌داریم.
+       */
+      if (sendingRef.current) {
+        pendingLocationRef.current = {
+          lat,
+          lng,
+          speed,
+          heading,
+          accuracy,
+        };
+
+        return;
+      }
+
+      sendingRef.current = true;
+
+      try {
+        const now = Date.now();
+
+        const currentPoint: RouteCoord = {
+          lat,
+          lng,
+        };
+
+        const previous = lastPoint.current;
+
+        let addedDistance = 0;
+
+        if (previous) {
+          addedDistance = distanceKm(previous, currentPoint);
         }
 
-        sendingRef.current =
-          true;
+        /*
+         * نویز GPS را وارد مسافت نکن.
+         */
+        const validMovement =
+          addedDistance >= MIN_MOVEMENT_KM && addedDistance < MAX_MOVEMENT_KM;
 
-        try {
-          const now =
-            Date.now();
+        if (validMovement) {
+          lastPoint.current = currentPoint;
+        } else if (!previous) {
+          lastPoint.current = currentPoint;
+        }
 
-          const currentPoint: RouteCoord =
-            {
-              lat,
-              lng,
-            };
+        const previousTime = lastTelemetryAt.current;
 
-          const previous =
-            lastPoint.current;
+        const elapsed = previousTime
+          ? Math.max(0, (now - previousTime) / 1000)
+          : 0;
 
-          let addedDistance =
-            0;
+        lastTelemetryAt.current = now;
 
-          if (
-            previous
-          ) {
-            addedDistance =
-              distanceKm(
-                previous,
-                currentPoint
-              );
-          }
+        /*
+         * اگر browser سرعت GPS داد
+         * از همان استفاده می‌کنیم.
+         *
+         * در غیر این صورت از فاصله /
+         * زمان محاسبه می‌شود.
+         */
+        let effectiveSpeed = Number.isFinite(speed) && speed >= 0 ? speed : 0;
 
-          /*
-           * نویز GPS را وارد مسافت نکن.
-           */
-          const validMovement =
-            addedDistance >=
-              MIN_MOVEMENT_KM &&
-            addedDistance <
-              MAX_MOVEMENT_KM;
+        if (effectiveSpeed <= 0 && elapsed > 0 && validMovement) {
+          effectiveSpeed = addedDistance / (elapsed / 3600);
+        }
 
-          if (
-            validMovement
-          ) {
-            lastPoint.current =
-              currentPoint;
-          } else if (
-            !previous
-          ) {
-            lastPoint.current =
-              currentPoint;
-          }
+        /*
+         * heading
+         */
+        let effectiveHeading =
+          Number.isFinite(heading) && heading >= 0
+            ? heading
+            : lastHeading.current;
 
-          const previousTime =
-            lastTelemetryAt.current;
+        effectiveHeading = ((effectiveHeading % 360) + 360) % 360;
 
-          const elapsed =
-            previousTime
-              ? Math.max(
-                  0,
-                  (now -
-                    previousTime) /
-                    1000
-                )
-              : 0;
+        lastHeading.current = effectiveHeading;
 
-          lastTelemetryAt.current =
-            now;
-
-          /*
-           * اگر browser سرعت GPS داد
-           * از همان استفاده می‌کنیم.
-           *
-           * در غیر این صورت از فاصله /
-           * زمان محاسبه می‌شود.
-           */
-          let effectiveSpeed =
-            Number.isFinite(
-              speed
-            ) &&
-            speed >= 0
-              ? speed
-              : 0;
-
-          if (
-            effectiveSpeed <=
-              0 &&
-            elapsed > 0 &&
-            validMovement
-          ) {
-            effectiveSpeed =
-              addedDistance /
-              (elapsed /
-                3600);
-          }
-
-          /*
-           * heading
-           */
-          let effectiveHeading =
-            Number.isFinite(
-              heading
-            ) &&
-            heading >= 0
-              ? heading
-              : lastHeading.current;
-
-          effectiveHeading =
-            ((effectiveHeading %
-              360) +
-              360) %
-            360;
-
-          lastHeading.current =
-            effectiveHeading;
-
-          /* -----------------------------------------
+        /* -----------------------------------------
              Statistics
           ----------------------------------------- */
 
-          setStats(
-            (prev) => {
-              const totalDistance =
-                prev.totalDistanceKm +
-                (validMovement
-                  ? addedDistance
-                  : 0);
+        setStats((prev) => {
+          const totalDistance =
+            prev.totalDistanceKm + (validMovement ? addedDistance : 0);
 
-              const stopped =
-                effectiveSpeed <
-                3;
+          const stopped = effectiveSpeed < 3;
 
-              const newStop =
-                stopSeconds.current +
-                (stopped
-                  ? elapsed
-                  : 0);
+          const newStop = stopSeconds.current + (stopped ? elapsed : 0);
 
-              stopSeconds.current =
-                newStop;
+          stopSeconds.current = newStop;
 
-              const duration =
-                startedAt.current
-                  ? Math.max(
-                      0,
-                      Math.round(
-                        (now -
-                          startedAt.current) /
-                          1000
-                      )
-                    )
-                  : prev.durationSeconds;
+          const duration = startedAt.current
+            ? Math.max(0, Math.round((now - startedAt.current) / 1000))
+            : prev.durationSeconds;
 
-              const fuel =
-                (totalDistance /
-                  100) *
-                  DEFAULT_FUEL_PER_100KM +
-                (newStop /
-                  3600) *
-                  IDLE_FUEL_PER_HOUR;
+          const fuel =
+            (totalDistance / 100) * DEFAULT_FUEL_PER_100KM +
+            (newStop / 3600) * IDLE_FUEL_PER_HOUR;
 
-              const stopRatio =
-                duration > 0
-                  ? newStop /
-                    duration
-                  : 0;
+          const stopRatio = duration > 0 ? newStop / duration : 0;
 
-              const efficiency =
-                Math.max(
-                  20,
-                  Math.min(
-                    100,
-                    Math.round(
-                      100 -
-                        stopRatio *
-                          40
-                    )
-                  )
-                );
-
-              return {
-                currentSpeed:
-                  Math.round(
-                    effectiveSpeed
-                  ),
-
-                heading:
-                  Math.round(
-                    effectiveHeading
-                  ),
-
-                totalDistanceKm:
-                  Number(
-                    totalDistance.toFixed(
-                      2
-                    )
-                  ),
-
-                durationSeconds:
-                  duration,
-
-                stopDurationSeconds:
-                  Math.round(
-                    newStop
-                  ),
-
-                fuelConsumedLiters:
-                  Number(
-                    fuel.toFixed(
-                      2
-                    )
-                  ),
-
-                efficiencyScore:
-                  efficiency,
-              };
-            }
+          const efficiency = Math.max(
+            20,
+            Math.min(100, Math.round(100 - stopRatio * 40)),
           );
 
-          /* -----------------------------------------
+          return {
+            currentSpeed: Math.round(effectiveSpeed),
+
+            heading: Math.round(effectiveHeading),
+
+            totalDistanceKm: Number(totalDistance.toFixed(2)),
+
+            durationSeconds: duration,
+
+            stopDurationSeconds: Math.round(newStop),
+
+            fuelConsumedLiters: Number(fuel.toFixed(2)),
+
+            efficiencyScore: efficiency,
+          };
+        });
+
+        /* -----------------------------------------
              Send GPS to backend
 
              Backend باید بعد از دریافت این درخواست
@@ -869,150 +576,96 @@ export function useDriverNavigation(
              broadcast کند.
           ----------------------------------------- */
 
-          await dispatchService.updateVehicleLocation(
-            {
-              vehicleId:
-                mission.vehicleId,
+        await dispatchService.updateVehicleLocation({
+          vehicleId: mission.vehicleId,
 
-              driverId,
+          driverId,
 
-              missionId:
-                mission.id,
+          missionId: mission.id,
 
-              latitude:
-                lat,
+          latitude: lat,
 
-              longitude:
-                lng,
+          longitude: lng,
 
-              accuracy,
+          accuracy,
 
-              speed:
-                effectiveSpeed,
+          speed: effectiveSpeed,
 
-              heading:
-                effectiveHeading,
+          heading: effectiveHeading,
 
-              recordedAtUtc:
-                new Date(
-                  now
-                ).toISOString(),
-            }
+          recordedAtUtc: new Date(now).toISOString(),
+        });
+
+        setGpsError(null);
+      } catch (error) {
+        console.warn('GPS telemetry API error:', error);
+
+        /*
+         * GPS خود مرورگر ممکن است سالم باشد،
+         * ولی API ارسال telemetry خطا داده باشد.
+         */
+        setGpsError('موقعیت دریافت شد اما ارسال آن به سرور ناموفق بود.');
+      } finally {
+        sendingRef.current = false;
+
+        /*
+         * اگر هنگام ارسال،
+         * GPS جدید رسیده بود،
+         * جدیدترین نقطه را ارسال کن.
+         */
+        const pending = pendingLocationRef.current;
+
+        pendingLocationRef.current = null;
+
+        if (pending) {
+          void sendLocation(
+            pending.lat,
+            pending.lng,
+            pending.speed,
+            pending.heading,
+            pending.accuracy,
           );
-
-          setGpsError(
-            null
-          );
-        } catch (
-          error
-        ) {
-          console.warn(
-            'GPS telemetry API error:',
-            error
-          );
-
-          /*
-           * GPS خود مرورگر ممکن است سالم باشد،
-           * ولی API ارسال telemetry خطا داده باشد.
-           */
-          setGpsError(
-            'موقعیت دریافت شد اما ارسال آن به سرور ناموفق بود.'
-          );
-        } finally {
-          sendingRef.current =
-            false;
-
-          /*
-           * اگر هنگام ارسال،
-           * GPS جدید رسیده بود،
-           * جدیدترین نقطه را ارسال کن.
-           */
-          const pending =
-            pendingLocationRef.current;
-
-          pendingLocationRef.current =
-            null;
-
-          if (
-            pending
-          ) {
-            void sendLocation(
-              pending.lat,
-              pending.lng,
-              pending.speed,
-              pending.heading,
-              pending.accuracy
-            );
-          }
         }
-      },
-      [
-        driverId,
-        mission,
-      ]
-    );
+      }
+    },
+    [driverId, mission],
+  );
 
   /* =========================================================
      Browser GPS Watch
   ========================================================= */
 
   useEffect(() => {
-    if (
-      !isDriving ||
-      !mission
-    ) {
+    if (!isDriving || !mission) {
       return;
     }
 
-    if (
-      typeof navigator ===
-        'undefined' ||
-      !navigator.geolocation
-    ) {
-      setGpsError(
-        'مرورگر شما GPS را پشتیبانی نمی‌کند.'
-      );
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGpsError('مرورگر شما GPS را پشتیبانی نمی‌کند.');
 
-      setIsDriving(
-        false
-      );
+      setIsDriving(false);
 
       return;
     }
 
-    setGpsError(
-      null
-    );
+    setGpsError(null);
 
-    if (
-      !startedAt.current
-    ) {
-      startedAt.current =
-        Date.now();
+    if (!startedAt.current) {
+      startedAt.current = Date.now();
     }
 
-    lastTelemetryAt.current =
-      Date.now();
+    lastTelemetryAt.current = Date.now();
 
     /* -----------------------------------------
        GPS Success
     ----------------------------------------- */
 
-    const success = (
-      position: GeolocationPosition
-    ) => {
-      const lat =
-        position.coords.latitude;
+    const success = (position: GeolocationPosition) => {
+      const lat = position.coords.latitude;
 
-      const lng =
-        position.coords.longitude;
+      const lng = position.coords.longitude;
 
-      if (
-        !isValidCoordinate(
-          lat,
-          lng
-        )
-      ) {
+      if (!isValidCoordinate(lat, lng)) {
         return;
       }
 
@@ -1021,71 +674,41 @@ export function useDriverNavigation(
        * تبدیل به km/h
        */
       const speed =
-        position.coords
-          .speed != null &&
-        position.coords
-          .speed >= 0
-          ? position.coords
-              .speed * 3.6
+        position.coords.speed != null && position.coords.speed >= 0
+          ? position.coords.speed * 3.6
           : 0;
 
       const heading =
-        position.coords
-          .heading != null &&
-        position.coords
-          .heading >= 0
-          ? position.coords
-              .heading
+        position.coords.heading != null && position.coords.heading >= 0
+          ? position.coords.heading
           : lastHeading.current;
 
       const accuracy =
-        position.coords
-          .accuracy != null
-          ? position.coords
-              .accuracy
-          : null;
+        position.coords.accuracy != null ? position.coords.accuracy : null;
 
-      void sendLocation(
-        lat,
-        lng,
-        speed,
-        heading,
-        accuracy
-      );
+      void sendLocation(lat, lng, speed, heading, accuracy);
     };
 
     /* -----------------------------------------
        GPS Error
     ----------------------------------------- */
 
-    const error = (
-      e: GeolocationPositionError
-    ) => {
-      switch (
-        e.code
-      ) {
+    const error = (e: GeolocationPositionError) => {
+      switch (e.code) {
         case 1:
-          setGpsError(
-            'دسترسی به موقعیت مکانی رد شده است.'
-          );
+          setGpsError('دسترسی به موقعیت مکانی رد شده است.');
           break;
 
         case 2:
-          setGpsError(
-            'موقعیت GPS در دسترس نیست.'
-          );
+          setGpsError('موقعیت GPS در دسترس نیست.');
           break;
 
         case 3:
-          setGpsError(
-            'دریافت موقعیت GPS بیش از حد طول کشید.'
-          );
+          setGpsError('دریافت موقعیت GPS بیش از حد طول کشید.');
           break;
 
         default:
-          setGpsError(
-            'دریافت موقعیت GPS ناموفق بود.'
-          );
+          setGpsError('دریافت موقعیت GPS ناموفق بود.');
       }
     };
 
@@ -1093,119 +716,78 @@ export function useDriverNavigation(
        Start GPS
     ----------------------------------------- */
 
-    watchId.current =
-      navigator.geolocation.watchPosition(
-        success,
-        error,
-        {
-          enableHighAccuracy:
-            true,
+    watchId.current = navigator.geolocation.watchPosition(success, error, {
+      enableHighAccuracy: true,
 
-          maximumAge: 2000,
+      maximumAge: 2000,
 
-          timeout: 15000,
-        }
-      );
+      timeout: 15000,
+    });
 
     /* -----------------------------------------
        Cleanup
     ----------------------------------------- */
 
     return () => {
-      if (
-        watchId.current !==
-        null
-      ) {
-        navigator.geolocation.clearWatch(
-          watchId.current
-        );
+      if (watchId.current !== null) {
+        navigator.geolocation.clearWatch(watchId.current);
       }
 
-      watchId.current =
-        null;
+      watchId.current = null;
     };
-  }, [
-    isDriving,
-    mission?.id,
-    sendLocation,
-  ]);
+  }, [isDriving, mission?.id, sendLocation]);
 
   /* =========================================================
      Start tracking
   ========================================================= */
 
-  const startTracking =
-    useCallback(() => {
-      if (!mission) {
-        setGpsError(
-          'مأموریتی برای شروع وجود ندارد.'
-        );
+  const startTracking = useCallback(() => {
+    if (!mission) {
+      setGpsError('مأموریتی برای شروع وجود ندارد.');
 
-        return;
-      }
+      return;
+    }
 
-      stopSeconds.current =
-        0;
+    stopSeconds.current = 0;
 
-      startedAt.current =
-        Date.now();
+    startedAt.current = Date.now();
 
-      lastTelemetryAt.current =
-        Date.now();
+    lastTelemetryAt.current = Date.now();
 
-      /*
-       * مبدأ نقطه اولیه مسیر است.
-       */
-      lastPoint.current =
-        {
-          lat:
-            mission.originLat,
+    /*
+     * مبدأ نقطه اولیه مسیر است.
+     */
+    lastPoint.current = {
+      lat: mission.originLat,
 
-          lng:
-            mission.originLng,
-        };
+      lng: mission.originLng,
+    };
 
-      setGpsError(
-        null
-      );
+    setGpsError(null);
 
-      setIsDriving(
-        true
-      );
-    }, [mission]);
+    setIsDriving(true);
+  }, [mission]);
 
   /* =========================================================
      Stop tracking
   ========================================================= */
 
-  const stopTracking =
-    useCallback(() => {
-      setIsDriving(
-        false
-      );
+  const stopTracking = useCallback(() => {
+    setIsDriving(false);
 
-      if (
-        watchId.current !==
-        null
-      ) {
-        navigator.geolocation.clearWatch(
-          watchId.current
-        );
-      }
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+    }
 
-      watchId.current =
-        null;
+    watchId.current = null;
 
-      lastTelemetryAt.current =
-        null;
+    lastTelemetryAt.current = null;
 
-      setStats(
-        (prev) => ({
-          ...prev,
-          currentSpeed: 0,
-        })
-      );
-    }, []);
+    setStats((prev) => ({
+      ...prev,
+      currentSpeed: 0,
+    }));
+  }, []);
 
   /* =========================================================
      Return

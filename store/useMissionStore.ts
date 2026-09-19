@@ -17,37 +17,24 @@ interface MissionState {
 
   loadMissions: () => Promise<void>;
 
-  setMissions: (
-    missions: Dispatch[],
-  ) => void;
+  setMissions: (missions: Dispatch[]) => void;
 
-  upsertMission: (
-    mission: Dispatch,
-  ) => void;
+  upsertMission: (mission: Dispatch) => void;
 
-  removeMission: (
-    id: number | string,
-  ) => void;
+  removeMission: (id: number | string) => void;
 
   clearMissions: () => void;
 }
 
 function getApiBaseUrl(): string {
-  if (
-    typeof window !== 'undefined' &&
-    window.CONFIG?.NEXT_PUBLIC_API_BASE
-  ) {
-    return String(
-      window.CONFIG.NEXT_PUBLIC_API_BASE,
-    ).replace(/\/+$/, '');
+  if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
+    return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
   }
 
   return '';
 }
 
-function normalizeList(
-  data: any,
-): Dispatch[] {
+function normalizeList(data: any): Dispatch[] {
   if (Array.isArray(data)) {
     return data;
   }
@@ -67,140 +54,104 @@ function normalizeList(
   return [];
 }
 
-export const useMissionStore =
-  create<MissionState>((set) => ({
-    missions: [],
+export const useMissionStore = create<MissionState>((set) => ({
+  missions: [],
 
-    isLoading: false,
+  isLoading: false,
 
-    error: null,
+  error: null,
 
-    loadMissions: async () => {
-      set({
-        isLoading: true,
-        error: null,
+  loadMissions: async () => {
+    set({
+      isLoading: true,
+      error: null,
+    });
+
+    try {
+      const apiBaseUrl = getApiBaseUrl();
+
+      const response = await fetch(`${apiBaseUrl}/api/Dispatches`, {
+        method: 'GET',
+
+        headers: {
+          Accept: 'application/json',
+        },
+
+        cache: 'no-store',
       });
 
-      try {
-        const apiBaseUrl =
-          getApiBaseUrl();
-
-        const response =
-          await fetch(
-            `${apiBaseUrl}/api/Dispatches`,
-            {
-              method: 'GET',
-
-              headers: {
-                Accept:
-                  'application/json',
-              },
-
-              cache: 'no-store',
-            },
-          );
-
-        if (!response.ok) {
-          throw new Error(
-            `GET /api/Dispatches failed: ${response.status}`,
-          );
-        }
-
-        const data =
-          await response.json();
-
-        const missions =
-          normalizeList(data);
-
-        set({
-          missions,
-          isLoading: false,
-          error: null,
-        });
-      } catch (error) {
-        console.error(
-          '[MissionStore] loadMissions error:',
-          error,
-        );
-
-        set({
-          isLoading: false,
-
-          error:
-            error instanceof Error
-              ? error.message
-              : 'خطا در دریافت مأموریت‌ها',
-        });
+      if (!response.ok) {
+        throw new Error(`GET /api/Dispatches failed: ${response.status}`);
       }
-    },
 
-    setMissions: (
-      missions,
-    ) => {
+      const data = await response.json();
+
+      const missions = normalizeList(data);
+
       set({
         missions,
-      });
-    },
-
-    upsertMission: (
-      mission,
-    ) => {
-      if (
-        !mission ||
-        mission.id == null
-      ) {
-        return;
-      }
-
-      set((state) => {
-        const index =
-          state.missions.findIndex(
-            (item) =>
-              String(item.id) ===
-              String(mission.id),
-          );
-
-        if (index === -1) {
-          return {
-            missions: [
-              mission,
-              ...state.missions,
-            ],
-          };
-        }
-
-        const missions = [
-          ...state.missions,
-        ];
-
-        missions[index] = {
-          ...missions[index],
-          ...mission,
-        };
-
-        return {
-          missions,
-        };
-      });
-    },
-
-    removeMission: (
-      id,
-    ) => {
-      set((state) => ({
-        missions:
-          state.missions.filter(
-            (mission) =>
-              String(mission.id) !==
-              String(id),
-          ),
-      }));
-    },
-
-    clearMissions: () => {
-      set({
-        missions: [],
+        isLoading: false,
         error: null,
       });
-    },
-  }));
+    } catch (error) {
+      console.error('[MissionStore] loadMissions error:', error);
+
+      set({
+        isLoading: false,
+
+        error:
+          error instanceof Error ? error.message : 'خطا در دریافت مأموریت‌ها',
+      });
+    }
+  },
+
+  setMissions: (missions) => {
+    set({
+      missions,
+    });
+  },
+
+  upsertMission: (mission) => {
+    if (!mission || mission.id == null) {
+      return;
+    }
+
+    set((state) => {
+      const index = state.missions.findIndex(
+        (item) => String(item.id) === String(mission.id),
+      );
+
+      if (index === -1) {
+        return {
+          missions: [mission, ...state.missions],
+        };
+      }
+
+      const missions = [...state.missions];
+
+      missions[index] = {
+        ...missions[index],
+        ...mission,
+      };
+
+      return {
+        missions,
+      };
+    });
+  },
+
+  removeMission: (id) => {
+    set((state) => ({
+      missions: state.missions.filter(
+        (mission) => String(mission.id) !== String(id),
+      ),
+    }));
+  },
+
+  clearMissions: () => {
+    set({
+      missions: [],
+      error: null,
+    });
+  },
+}));

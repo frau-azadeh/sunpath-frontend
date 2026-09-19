@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 
 import { dispatchService } from '@/services/dispatchService';
-
 import type {
   CreateDispatchRequest,
   Dispatch,
@@ -24,14 +23,9 @@ type DispatchState = {
 
   error: string | null;
 
-  fetchDispatches: (
-    signal?: AbortSignal,
-  ) => Promise<void>;
+  fetchDispatches: (signal?: AbortSignal) => Promise<void>;
 
-  fetchDispatchById: (
-    id: number,
-    signal?: AbortSignal,
-  ) => Promise<void>;
+  fetchDispatchById: (id: number, signal?: AbortSignal) => Promise<void>;
 
   createDispatch: (
     data: CreateDispatchRequest,
@@ -42,25 +36,15 @@ type DispatchState = {
     data: UpdateDispatchStatusRequest,
   ) => Promise<void>;
 
-  updateVehicleLocation: (
-    data: UpdateVehicleLocationRequest,
-  ) => Promise<void>;
+  updateVehicleLocation: (data: UpdateVehicleLocationRequest) => Promise<void>;
 
-  setDispatches: (
-    dispatches: Dispatch[],
-  ) => void;
+  setDispatches: (dispatches: Dispatch[]) => void;
 
-  setActiveDispatch: (
-    dispatch: Dispatch | null,
-  ) => void;
+  setActiveDispatch: (dispatch: Dispatch | null) => void;
 
-  upsertDispatch: (
-    dispatch: Dispatch,
-  ) => void;
+  upsertDispatch: (dispatch: Dispatch) => void;
 
-  removeDispatch: (
-    id: number,
-  ) => void;
+  removeDispatch: (id: number) => void;
 
   clearActiveDispatch: () => void;
 
@@ -71,590 +55,375 @@ type DispatchState = {
    Helpers
 ========================================================= */
 
-const getErrorMessage = (
-  error: unknown,
-  fallbackMessage: string,
-): string => {
-  if (
-    error instanceof Error &&
-    error.message.trim()
-  ) {
+const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
+  if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
 
   return fallbackMessage;
 };
 
-const isAbortError = (
-  error: unknown,
-): boolean => {
-  return (
-    error instanceof DOMException &&
-    error.name === 'AbortError'
-  );
+const isAbortError = (error: unknown): boolean => {
+  return error instanceof DOMException && error.name === 'AbortError';
 };
 
 /* =========================================================
    Store
 ========================================================= */
 
-export const useDispatchStore =
-  create<DispatchState>(
-    (set, get) => ({
-      dispatches: [],
+export const useDispatchStore = create<DispatchState>((set, get) => ({
+  dispatches: [],
 
-      activeDispatch: null,
+  activeDispatch: null,
 
-      loading: false,
+  loading: false,
 
-      error: null,
+  error: null,
 
-      /* =====================================================
+  /* =====================================================
          دریافت همه مأموریت‌ها
       ===================================================== */
 
-      fetchDispatches: async (
-        signal,
-      ) => {
+  fetchDispatches: async (signal) => {
+    set({
+      loading: true,
+      error: null,
+    });
+
+    try {
+      const dispatches = await dispatchService.getAll(signal);
+
+      set({
+        dispatches: Array.isArray(dispatches) ? dispatches : [],
+
+        loading: false,
+
+        error: null,
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
         set({
-          loading: true,
-          error: null,
+          loading: false,
         });
 
-        try {
-          const dispatches =
-            await dispatchService.getAll(
-              signal,
-            );
+        return;
+      }
 
-          set({
-            dispatches:
-              Array.isArray(dispatches)
-                ? dispatches
-                : [],
+      set({
+        loading: false,
 
-            loading: false,
+        error: getErrorMessage(
+          error,
+          'بارگذاری لیست مأموریت‌ها با خطا مواجه شد.',
+        ),
+      });
+    }
+  },
 
-            error: null,
-          });
-        } catch (error) {
-          if (
-            isAbortError(error)
-          ) {
-            set({
-              loading: false,
-            });
-
-            return;
-          }
-
-          set({
-            loading: false,
-
-            error:
-              getErrorMessage(
-                error,
-                'بارگذاری لیست مأموریت‌ها با خطا مواجه شد.',
-              ),
-          });
-        }
-      },
-
-      /* =====================================================
+  /* =====================================================
          دریافت یک مأموریت
       ===================================================== */
 
-      fetchDispatchById:
-        async (
-          id,
-          signal,
-        ) => {
-          set({
-            loading: true,
-            error: null,
-          });
+  fetchDispatchById: async (id, signal) => {
+    set({
+      loading: true,
+      error: null,
+    });
 
-          try {
-            const dispatch =
-              await dispatchService.getById(
-                id,
-                signal,
-              );
+    try {
+      const dispatch = await dispatchService.getById(id, signal);
 
-            set(
-              (state) => {
-                const exists =
-                  state.dispatches.some(
-                    (item) =>
-                      Number(
-                        item.id,
-                      ) ===
-                      Number(
-                        dispatch.id,
-                      ),
-                  );
+      set((state) => {
+        const exists = state.dispatches.some(
+          (item) => Number(item.id) === Number(dispatch.id),
+        );
 
-                return {
-                  activeDispatch:
-                    dispatch,
+        return {
+          activeDispatch: dispatch,
 
-                  dispatches:
-                    exists
-                      ? state.dispatches.map(
-                          (
-                            item,
-                          ) =>
-                            Number(
-                              item.id,
-                            ) ===
-                            Number(
-                              dispatch.id,
-                            )
-                              ? dispatch
-                              : item,
-                        )
-                      : [
-                          dispatch,
-                          ...state.dispatches,
-                        ],
-
-                  loading:
-                    false,
-
-                  error:
-                    null,
-                };
-              },
-            );
-          } catch (
-            error
-          ) {
-            if (
-              isAbortError(
-                error,
+          dispatches: exists
+            ? state.dispatches.map((item) =>
+                Number(item.id) === Number(dispatch.id) ? dispatch : item,
               )
-            ) {
-              set({
-                loading:
-                  false,
-              });
+            : [dispatch, ...state.dispatches],
 
-              return;
-            }
+          loading: false,
 
-            set({
-              loading: false,
+          error: null,
+        };
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        set({
+          loading: false,
+        });
 
-              error:
-                getErrorMessage(
-                  error,
-                  'بارگذاری مأموریت با خطا مواجه شد.',
-                ),
-            });
-          }
-        },
+        return;
+      }
 
-      /* =====================================================
+      set({
+        loading: false,
+
+        error: getErrorMessage(error, 'بارگذاری مأموریت با خطا مواجه شد.'),
+      });
+    }
+  },
+
+  /* =====================================================
          ایجاد مأموریت
       ===================================================== */
 
-      createDispatch:
-        async (
-          data,
-        ) => {
+  createDispatch: async (data) => {
+    set({
+      loading: true,
+      error: null,
+    });
+
+    try {
+      const result = await dispatchService.create(data);
+
+      /*
+       * Controller فقط id برمی‌گرداند.
+       *
+       * بنابراین بعد از Create،
+       * مأموریت کامل را از API می‌گیریم.
+       */
+
+      try {
+        const created = await dispatchService.getById(result.id);
+
+        get().upsertDispatch(created);
+      } catch (reloadError) {
+        console.warn(
+          '[DispatchStore] created dispatch reload failed:',
+          reloadError,
+        );
+
+        /*
+         * اگر GET by id شکست خورد،
+         * حداقل کل لیست را دوباره می‌گیریم.
+         */
+
+        try {
+          const dispatches = await dispatchService.getAll();
+
           set({
-            loading: true,
-            error: null,
+            dispatches: Array.isArray(dispatches) ? dispatches : [],
           });
+        } catch (listError) {
+          console.warn('[DispatchStore] reload dispatches failed:', listError);
+        }
+      }
 
-          try {
-            const result =
-              await dispatchService.create(
-                data,
-              );
+      set({
+        loading: false,
+        error: null,
+      });
 
-            /*
-             * Controller فقط id برمی‌گرداند.
-             *
-             * بنابراین بعد از Create،
-             * مأموریت کامل را از API می‌گیریم.
-             */
+      return result;
+    } catch (error) {
+      const message = getErrorMessage(error, 'ایجاد مأموریت با خطا مواجه شد.');
 
-            try {
-              const created =
-                await dispatchService.getById(
-                  result.id,
-                );
+      set({
+        loading: false,
+        error: message,
+      });
 
-              get().upsertDispatch(
-                created,
-              );
-            } catch (
-              reloadError
-            ) {
-              console.warn(
-                '[DispatchStore] created dispatch reload failed:',
-                reloadError,
-              );
+      throw error;
+    }
+  },
 
-              /*
-               * اگر GET by id شکست خورد،
-               * حداقل کل لیست را دوباره می‌گیریم.
-               */
-
-              try {
-                const dispatches =
-                  await dispatchService.getAll();
-
-                set({
-                  dispatches:
-                    Array.isArray(
-                      dispatches,
-                    )
-                      ? dispatches
-                      : [],
-                });
-              } catch (
-                listError
-              ) {
-                console.warn(
-                  '[DispatchStore] reload dispatches failed:',
-                  listError,
-                );
-              }
-            }
-
-            set({
-              loading: false,
-              error: null,
-            });
-
-            return result;
-          } catch (
-            error
-          ) {
-            const message =
-              getErrorMessage(
-                error,
-                'ایجاد مأموریت با خطا مواجه شد.',
-              );
-
-            set({
-              loading: false,
-              error: message,
-            });
-
-            throw error;
-          }
-        },
-
-      /* =====================================================
+  /* =====================================================
          تغییر وضعیت مأموریت
       ===================================================== */
 
-      updateDispatchStatus:
-        async (
-          id,
-          data,
-        ) => {
-          set({
-            loading: true,
-            error: null,
-          });
+  updateDispatchStatus: async (id, data) => {
+    set({
+      loading: true,
+      error: null,
+    });
 
-          try {
-            await dispatchService.updateStatus(
-              id,
-              data,
-            );
+    try {
+      await dispatchService.updateStatus(id, data);
 
-            /*
-             * ابتدا state لوکال را سریع تغییر می‌دهیم.
-             */
+      /*
+       * ابتدا state لوکال را سریع تغییر می‌دهیم.
+       */
 
-            set(
-              (state) => ({
-                loading:
-                  false,
+      set((state) => ({
+        loading: false,
 
-                error:
-                  null,
+        error: null,
 
-                dispatches:
-                  state.dispatches.map(
-                    (
-                      item,
-                    ) =>
-                      Number(
-                        item.id,
-                      ) ===
-                      Number(
-                        id,
-                      )
-                        ? {
-                            ...item,
-                            status:
-                              data.status,
-                          }
-                        : item,
-                  ),
+        dispatches: state.dispatches.map((item) =>
+          Number(item.id) === Number(id)
+            ? {
+                ...item,
+                status: data.status,
+              }
+            : item,
+        ),
 
-                activeDispatch:
-                  Number(
-                    state
-                      .activeDispatch
-                      ?.id,
-                  ) ===
-                  Number(id)
-                    ? {
-                        ...state.activeDispatch!,
-                        status:
-                          data.status,
-                      }
-                    : state.activeDispatch,
-              }),
-            );
+        activeDispatch:
+          Number(state.activeDispatch?.id) === Number(id)
+            ? {
+                ...state.activeDispatch!,
+                status: data.status,
+              }
+            : state.activeDispatch,
+      }));
 
-            /*
-             * بعد نسخه واقعی DB را می‌گیریم.
-             */
+      /*
+       * بعد نسخه واقعی DB را می‌گیریم.
+       */
 
-            try {
-              const updated =
-                await dispatchService.getById(
-                  id,
-                );
+      try {
+        const updated = await dispatchService.getById(id);
 
-              get().upsertDispatch(
-                updated,
-              );
-            } catch (
-              error
-            ) {
-              console.warn(
-                '[DispatchStore] status refresh failed:',
-                error,
-              );
-            }
-          } catch (
-            error
-          ) {
-            const message =
-              getErrorMessage(
-                error,
-                'به‌روزرسانی وضعیت مأموریت با خطا مواجه شد.',
-              );
+        get().upsertDispatch(updated);
+      } catch (error) {
+        console.warn('[DispatchStore] status refresh failed:', error);
+      }
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        'به‌روزرسانی وضعیت مأموریت با خطا مواجه شد.',
+      );
 
-            set({
-              loading: false,
-              error: message,
-            });
+      set({
+        loading: false,
+        error: message,
+      });
 
-            throw error;
-          }
-        },
+      throw error;
+    }
+  },
 
-      /* =====================================================
+  /* =====================================================
          ثبت GPS
       ===================================================== */
 
-      updateVehicleLocation:
-        async (
-          data,
-        ) => {
-          set({
-            error: null,
-          });
+  updateVehicleLocation: async (data) => {
+    set({
+      error: null,
+    });
 
-          try {
-            await dispatchService.updateVehicleLocation(
-              data,
-            );
-          } catch (
-            error
-          ) {
-            const message =
-              getErrorMessage(
-                error,
-                'ثبت موقعیت خودرو با خطا مواجه شد.',
-              );
+    try {
+      await dispatchService.updateVehicleLocation(data);
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        'ثبت موقعیت خودرو با خطا مواجه شد.',
+      );
 
-            set({
-              error: message,
-            });
+      set({
+        error: message,
+      });
 
-            throw error;
-          }
-        },
+      throw error;
+    }
+  },
 
-      /* =====================================================
+  /* =====================================================
          Set list
       ===================================================== */
 
-      setDispatches: (
-        dispatches,
-      ) => {
-        set({
-          dispatches:
-            Array.isArray(
-              dispatches,
-            )
-              ? dispatches
-              : [],
-        });
-      },
+  setDispatches: (dispatches) => {
+    set({
+      dispatches: Array.isArray(dispatches) ? dispatches : [],
+    });
+  },
 
-      /* =====================================================
+  /* =====================================================
          Active
       ===================================================== */
 
-      setActiveDispatch: (
-        dispatch,
-      ) => {
-        set({
-          activeDispatch:
-            dispatch,
-        });
-      },
+  setActiveDispatch: (dispatch) => {
+    set({
+      activeDispatch: dispatch,
+    });
+  },
 
-      /* =====================================================
+  /* =====================================================
          UPSERT
       ===================================================== */
 
-      upsertDispatch: (
-        dispatch,
-      ) => {
-        if (
-          !dispatch ||
-          dispatch.id == null
-        ) {
-          return;
-        }
+  upsertDispatch: (dispatch) => {
+    if (!dispatch || dispatch.id == null) {
+      return;
+    }
 
-        set(
-          (state) => {
-            const index =
-              state.dispatches.findIndex(
-                (
-                  item,
-                ) =>
-                  Number(
-                    item.id,
-                  ) ===
-                  Number(
-                    dispatch.id,
-                  ),
-              );
+    set((state) => {
+      const index = state.dispatches.findIndex(
+        (item) => Number(item.id) === Number(dispatch.id),
+      );
 
-            if (
-              index === -1
-            ) {
-              return {
-                dispatches: [
-                  dispatch,
-                  ...state.dispatches,
-                ],
+      if (index === -1) {
+        return {
+          dispatches: [dispatch, ...state.dispatches],
 
-                activeDispatch:
-                  Number(
-                    state
-                      .activeDispatch
-                      ?.id,
-                  ) ===
-                  Number(
-                    dispatch.id,
-                  )
-                    ? dispatch
-                    : state.activeDispatch,
-              };
-            }
+          activeDispatch:
+            Number(state.activeDispatch?.id) === Number(dispatch.id)
+              ? dispatch
+              : state.activeDispatch,
+        };
+      }
 
-            const dispatches = [
-              ...state.dispatches,
-            ];
+      const dispatches = [...state.dispatches];
 
-            dispatches[index] = {
-              ...dispatches[
-                index
-              ],
-              ...dispatch,
-            };
+      dispatches[index] = {
+        ...dispatches[index],
+        ...dispatch,
+      };
 
-            return {
-              dispatches,
+      return {
+        dispatches,
 
-              activeDispatch:
-                Number(
-                  state
-                    .activeDispatch
-                    ?.id,
-                ) ===
-                Number(
-                  dispatch.id,
-                )
-                  ? {
-                      ...state.activeDispatch!,
-                      ...dispatch,
-                    }
-                  : state.activeDispatch,
-            };
-          },
-        );
-      },
+        activeDispatch:
+          Number(state.activeDispatch?.id) === Number(dispatch.id)
+            ? {
+                ...state.activeDispatch!,
+                ...dispatch,
+              }
+            : state.activeDispatch,
+      };
+    });
+  },
 
-      /* =====================================================
+  /* =====================================================
          REMOVE
       ===================================================== */
 
-      removeDispatch: (
-        id,
-      ) => {
-        set(
-          (state) => ({
-            dispatches:
-              state.dispatches.filter(
-                (
-                  item,
-                ) =>
-                  Number(
-                    item.id,
-                  ) !==
-                  Number(id),
-              ),
+  removeDispatch: (id) => {
+    set((state) => ({
+      dispatches: state.dispatches.filter(
+        (item) => Number(item.id) !== Number(id),
+      ),
 
-            activeDispatch:
-              Number(
-                state
-                  .activeDispatch
-                  ?.id,
-              ) ===
-              Number(id)
-                ? null
-                : state.activeDispatch,
-          }),
-        );
-      },
+      activeDispatch:
+        Number(state.activeDispatch?.id) === Number(id)
+          ? null
+          : state.activeDispatch,
+    }));
+  },
 
-      /* =====================================================
+  /* =====================================================
          Clear active
       ===================================================== */
 
-      clearActiveDispatch:
-        () => {
-          set({
-            activeDispatch:
-              null,
-          });
-        },
+  clearActiveDispatch: () => {
+    set({
+      activeDispatch: null,
+    });
+  },
 
-      /* =====================================================
+  /* =====================================================
          Clear error
       ===================================================== */
 
-      clearError: () => {
-        set({
-          error: null,
-        });
-      },
-    }),
-  );
+  clearError: () => {
+    set({
+      error: null,
+    });
+  },
+}));

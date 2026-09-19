@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Polyline,
   Popup,
+  TileLayer,
   useMap,
 } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 export type FlexiblePoint =
   | [number, number]
@@ -28,7 +29,9 @@ export interface DriverNavigationMapProps {
   neshanApiKey?: string; // اگر کلید نشان داری پاس بده برای ترافیک لحظه‌ای تهران
 }
 
-export function normalizeCoord(point?: FlexiblePoint | null): [number, number] | null {
+export function normalizeCoord(
+  point?: FlexiblePoint | null,
+): [number, number] | null {
   if (!point) return null;
   if (Array.isArray(point) && point.length >= 2) {
     return [Number(point[0]), Number(point[1])];
@@ -105,7 +108,9 @@ export default function DriverNavigationMap({
   const normOrigin = normalizeCoord(origin);
   const normDest = normalizeCoord(destination);
 
-  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
+    [],
+  );
   const [trafficSegments, setTrafficSegments] = useState<
     { points: [number, number][]; color: string; statusText: string }[]
   >([]);
@@ -124,7 +129,7 @@ export default function DriverNavigationMap({
     // اگر کلید Neshan داشتیم از Neshan Traffic Routing استفاده می‌کنیم
     if (neshanApiKey) {
       const neshanUrl = `https://api.neshan.org/v4/direction?type=car&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&traffic=true`;
-      
+
       fetch(neshanUrl, {
         headers: { 'Api-Key': neshanApiKey },
       })
@@ -154,13 +159,17 @@ export default function DriverNavigationMap({
 
           // محاسبه ترافیک تقریبی بر اساس ساعت فعلی تهران و بزرگراه‌ها
           const currentHour = new Date().getHours();
-          const isPeakHour = (currentHour >= 7 && currentHour <= 10) || (currentHour >= 16 && currentHour <= 20);
-          
+          const isPeakHour =
+            (currentHour >= 7 && currentHour <= 10) ||
+            (currentHour >= 16 && currentHour <= 20);
+
           const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
           const baseDurationMins = Math.round(route.duration / 60);
           // ضریب ترافیک در ساعات پیک (۱.۶ الی ۲ برابر زمان عادی)
           const trafficMultiplier = isPeakHour ? 1.8 : 1.2;
-          const durationWithTraffic = Math.round(baseDurationMins * trafficMultiplier);
+          const durationWithTraffic = Math.round(
+            baseDurationMins * trafficMultiplier,
+          );
           const delay = durationWithTraffic - baseDurationMins;
 
           setTrafficInfo({
@@ -195,9 +204,16 @@ export default function DriverNavigationMap({
         }
       })
       .catch((err) => console.error('Routing fetch error:', err));
-  }, [normOrigin?.[0], normOrigin?.[1], normDest?.[0], normDest?.[1], neshanApiKey]);
+  }, [
+    normOrigin?.[0],
+    normOrigin?.[1],
+    normDest?.[0],
+    normDest?.[1],
+    neshanApiKey,
+  ]);
 
-  const defaultCenter: [number, number] = normCurrent || normOrigin || [35.6997, 51.338];
+  const defaultCenter: [number, number] = normCurrent ||
+    normOrigin || [35.6997, 51.338];
 
   return (
     <div className="relative h-full w-full">
@@ -206,19 +222,25 @@ export default function DriverNavigationMap({
         <div className="absolute top-4 right-4 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl p-3 text-white shadow-2xl flex items-center gap-4 text-xs">
           <div>
             <span className="text-slate-400 block">مسافت</span>
-            <span className="font-bold text-sm text-slate-100">{trafficInfo.distanceKm} کیلومتر</span>
+            <span className="font-bold text-sm text-slate-100">
+              {trafficInfo.distanceKm} کیلومتر
+            </span>
           </div>
           <div className="h-7 w-[1px] bg-slate-700"></div>
           <div>
             <span className="text-slate-400 block">زمان با ترافیک</span>
-            <span className="font-bold text-sm text-amber-400">{trafficInfo.durationMins} دقیقه</span>
+            <span className="font-bold text-sm text-amber-400">
+              {trafficInfo.durationMins} دقیقه
+            </span>
           </div>
           {trafficInfo.trafficDelayMins > 0 && (
             <>
               <div className="h-7 w-[1px] bg-slate-700"></div>
               <div>
                 <span className="text-rose-400 block">تأخیر ترافیک</span>
-                <span className="font-bold text-rose-300">+{trafficInfo.trafficDelayMins} دقیقه</span>
+                <span className="font-bold text-rose-300">
+                  +{trafficInfo.trafficDelayMins} دقیقه
+                </span>
               </div>
             </>
           )}
@@ -240,7 +262,7 @@ export default function DriverNavigationMap({
         {/* لایه ترافیک زنده جهانی OpenStreetMap / TomTom */}
         {showTrafficLayer && (
           <TileLayer
-            attribution='Traffic Data'
+            attribution="Traffic Data"
             url="https://traffic.openterrain.org/{z}/{x}/{y}.png"
             opacity={0.65}
           />
