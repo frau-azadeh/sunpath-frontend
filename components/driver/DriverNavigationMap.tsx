@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
+  Fragment,
+  useEffect,
+} from 'react';
+
+import {
+  CircleMarker,
   MapContainer,
   Marker,
   Polyline,
@@ -13,305 +15,423 @@ import {
   useMap,
 } from 'react-leaflet';
 
-export type FlexiblePoint =
-  | [number, number]
-  | { lat: number; lng: number }
-  | { latitude: number; longitude: number };
+import L from 'leaflet';
+
+import 'leaflet/dist/leaflet.css';
+
+import type {
+  RouteCoord,
+} from '@/hooks/useDriverNavigation';
+
+export interface DriverNavigationMapPoint {
+  lat: number;
+  lng: number;
+  name: string;
+}
 
 export interface DriverNavigationMapProps {
-  currentLocation?: FlexiblePoint | null;
-  origin?: FlexiblePoint & { name?: string };
-  destination?: FlexiblePoint & { name?: string };
-  routeCoordinates?: FlexiblePoint[];
-  heading?: number;
+  currentLocation: RouteCoord | null;
+
+  origin: DriverNavigationMapPoint;
+
+  destination: DriverNavigationMapPoint;
+
+  routeCoordinates: RouteCoord[];
+
+  heading: number;
+
   showTrafficLayer?: boolean;
-  zoom?: number;
-  neshanApiKey?: string; // اگر کلید نشان داری پاس بده برای ترافیک لحظه‌ای تهران
 }
 
-export function normalizeCoord(
-  point?: FlexiblePoint | null,
-): [number, number] | null {
-  if (!point) return null;
-  if (Array.isArray(point) && point.length >= 2) {
-    return [Number(point[0]), Number(point[1])];
-  }
-  if (typeof point === 'object') {
-    if ('lat' in point && 'lng' in point) {
-      return [Number(point.lat), Number(point.lng)];
-    }
-    if ('latitude' in point && 'longitude' in point) {
-      return [Number(point.latitude), Number(point.longitude)];
-    }
-  }
-  return null;
-}
+const isValidCoordinate = (
+  lat: number,
+  lng: number,
+): boolean => {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
+};
 
-const truckIcon = L.divIcon({
-  className: 'custom-driver-marker',
-  html: `
-    <div style="background-color: #ea580c; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-        <path d="M15 18H9"/>
-        <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
-        <circle cx="17" cy="18" r="2"/>
-        <circle cx="7" cy="18" r="2"/>
-      </svg>
-    </div>
-  `,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
+const createVehicleIcon = (
+  heading: number,
+): L.DivIcon => {
+  const safeHeading =
+    Number.isFinite(heading)
+      ? ((heading % 360) + 360) %
+        360
+      : 0;
 
-const originIcon = L.divIcon({
-  className: 'custom-origin-marker',
-  html: `
-    <div style="background-color: #10b981; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
-      <div style="width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
-    </div>
-  `,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-});
+  return L.divIcon({
+    className:
+      'sunpath-driver-marker',
 
-const destIcon = L.divIcon({
-  className: 'custom-dest-marker',
-  html: `
-    <div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
-      <div style="width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
-    </div>
-  `,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-});
+    html: `
+      <div
+        style="
+          width:42px;
+          height:42px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          border-radius:50%;
+          background:#ea580c;
+          border:4px solid #ffffff;
+          box-shadow:0 4px 14px rgba(0,0,0,.25);
+        "
+      >
+        <div
+          style="
+            width:0;
+            height:0;
+            border-left:8px solid transparent;
+            border-right:8px solid transparent;
+            border-bottom:18px solid #ffffff;
+            transform:rotate(${safeHeading}deg);
+            transform-origin:center center;
+          "
+        ></div>
+      </div>
+    `,
 
-function MapAutoCenter({ center }: { center: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView(center, map.getZoom(), { animate: true });
-    }
-  }, [center, map]);
-  return null;
-}
+    iconSize: [42, 42],
 
-export default function DriverNavigationMap({
+    iconAnchor: [21, 21],
+
+    popupAnchor: [0, -24],
+  });
+};
+
+function MapViewportController({
   currentLocation,
   origin,
   destination,
-  showTrafficLayer = true,
-  zoom = 13,
-  neshanApiKey,
-}: DriverNavigationMapProps) {
-  const normCurrent = normalizeCoord(currentLocation);
-  const normOrigin = normalizeCoord(origin);
-  const normDest = normalizeCoord(destination);
+  routeCoordinates,
+}: {
+  currentLocation: RouteCoord | null;
 
-  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
-    [],
-  );
-  const [trafficSegments, setTrafficSegments] = useState<
-    { points: [number, number][]; color: string; statusText: string }[]
-  >([]);
-  const [trafficInfo, setTrafficInfo] = useState<{
-    distanceKm: number;
-    durationMins: number;
-    trafficDelayMins: number;
-  } | null>(null);
+  origin: DriverNavigationMapPoint;
 
+  destination: DriverNavigationMapPoint;
+
+  routeCoordinates: RouteCoord[];
+}) {
+  const map = useMap();
+
+  /*
+   * وقتی GPS واقعی تغییر می‌کند،
+   * نقشه به‌آرامی راننده را دنبال می‌کند.
+   */
   useEffect(() => {
-    const start = normOrigin || normCurrent;
-    const end = normDest;
-
-    if (!start || !end) return;
-
-    // اگر کلید Neshan داشتیم از Neshan Traffic Routing استفاده می‌کنیم
-    if (neshanApiKey) {
-      const neshanUrl = `https://api.neshan.org/v4/direction?type=car&origin=${start[0]},${start[1]}&destination=${end[0]},${end[1]}&traffic=true`;
-
-      fetch(neshanUrl, {
-        headers: { 'Api-Key': neshanApiKey },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.routes?.[0]?.legs?.[0]?.steps) {
-            // دریافت نقاط به همراه ترافیک زنده
-            // داده‌های مسیر و ترافیک نشان
-          }
-        })
-        .catch((err) => console.error('Neshan routing error:', err));
+    if (
+      !currentLocation ||
+      !isValidCoordinate(
+        currentLocation.lat,
+        currentLocation.lng,
+      )
+    ) {
       return;
     }
 
-    // در غیر این صورت از OSRM با آنالیز و شبیه‌سازی ترافیک بزرگراهی تهران استفاده می‌کنیم
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson&annotations=speed,duration,distance`;
-
-    fetch(osrmUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        const route = data?.routes?.[0];
-        if (route?.geometry?.coordinates) {
-          const coords: [number, number][] = route.geometry.coordinates.map(
-            (c: [number, number]) => [c[1], c[0]],
-          );
-          setRouteCoordinates(coords);
-
-          // محاسبه ترافیک تقریبی بر اساس ساعت فعلی تهران و بزرگراه‌ها
-          const currentHour = new Date().getHours();
-          const isPeakHour =
-            (currentHour >= 7 && currentHour <= 10) ||
-            (currentHour >= 16 && currentHour <= 20);
-
-          const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
-          const baseDurationMins = Math.round(route.duration / 60);
-          // ضریب ترافیک در ساعات پیک (۱.۶ الی ۲ برابر زمان عادی)
-          const trafficMultiplier = isPeakHour ? 1.8 : 1.2;
-          const durationWithTraffic = Math.round(
-            baseDurationMins * trafficMultiplier,
-          );
-          const delay = durationWithTraffic - baseDurationMins;
-
-          setTrafficInfo({
-            distanceKm,
-            durationMins: durationWithTraffic,
-            trafficDelayMins: delay,
-          });
-
-          // تقسیم مسیر به سگمنت‌های ترافیکی رنگی (قرمز = پرترافیک، نارنجی = کند، آبی = روان)
-          if (coords.length > 6) {
-            const oneThird = Math.floor(coords.length / 3);
-            const twoThirds = Math.floor((coords.length * 2) / 3);
-
-            setTrafficSegments([
-              {
-                points: coords.slice(0, oneThird + 1),
-                color: '#2563eb', // بخش اول روان
-                statusText: 'روان',
-              },
-              {
-                points: coords.slice(oneThird, twoThirds + 1),
-                color: isPeakHour ? '#ef4444' : '#f59e0b', // بخش میانی (همت/یادگار ترافیک سنگین)
-                statusText: isPeakHour ? 'ترافیک سنگین' : 'نیمه‌سنگین',
-              },
-              {
-                points: coords.slice(twoThirds),
-                color: isPeakHour ? '#f59e0b' : '#10b981',
-                statusText: isPeakHour ? 'نیمه‌سنگین' : 'روان',
-              },
-            ]);
-          }
-        }
-      })
-      .catch((err) => console.error('Routing fetch error:', err));
+    map.panTo(
+      [
+        currentLocation.lat,
+        currentLocation.lng,
+      ],
+      {
+        animate: true,
+        duration: 0.5,
+      },
+    );
   }, [
-    normOrigin?.[0],
-    normOrigin?.[1],
-    normDest?.[0],
-    normDest?.[1],
-    neshanApiKey,
+    map,
+    currentLocation?.lat,
+    currentLocation?.lng,
   ]);
 
-  const defaultCenter: [number, number] = normCurrent ||
-    normOrigin || [35.6997, 51.338];
+  /*
+   * در شروع، کل مسیر را داخل viewport قرار می‌دهیم.
+   */
+  useEffect(() => {
+    const points: L.LatLngExpression[] =
+      [];
+
+    if (
+      isValidCoordinate(
+        origin.lat,
+        origin.lng,
+      )
+    ) {
+      points.push([
+        origin.lat,
+        origin.lng,
+      ]);
+    }
+
+    if (
+      Array.isArray(
+        routeCoordinates,
+      )
+    ) {
+      for (const point of routeCoordinates) {
+        if (
+          isValidCoordinate(
+            point.lat,
+            point.lng,
+          )
+        ) {
+          points.push([
+            point.lat,
+            point.lng,
+          ]);
+        }
+      }
+    }
+
+    if (
+      isValidCoordinate(
+        destination.lat,
+        destination.lng,
+      )
+    ) {
+      points.push([
+        destination.lat,
+        destination.lng,
+      ]);
+    }
+
+    if (points.length < 2) {
+      return;
+    }
+
+    const bounds =
+      L.latLngBounds(points);
+
+    map.fitBounds(bounds, {
+      padding: [40, 40],
+
+      maxZoom: 16,
+
+      animate: false,
+    });
+  }, [
+    map,
+    origin.lat,
+    origin.lng,
+    destination.lat,
+    destination.lng,
+    routeCoordinates,
+  ]);
+
+  return null;
+}
+
+export function DriverNavigationMap({
+  currentLocation,
+  origin,
+  destination,
+  routeCoordinates,
+  heading,
+  showTrafficLayer = false,
+}: DriverNavigationMapProps) {
+  const center: [
+    number,
+    number,
+  ] = currentLocation &&
+  isValidCoordinate(
+    currentLocation.lat,
+    currentLocation.lng,
+  )
+    ? [
+        currentLocation.lat,
+        currentLocation.lng,
+      ]
+    : [
+        origin.lat,
+        origin.lng,
+      ];
+
+  const validRoute =
+    Array.isArray(
+      routeCoordinates,
+    )
+      ? routeCoordinates.filter(
+          (point) =>
+            isValidCoordinate(
+              point.lat,
+              point.lng,
+            ),
+        )
+      : [];
+
+  const vehicleIcon =
+    createVehicleIcon(
+      heading,
+    );
 
   return (
     <div className="relative h-full w-full">
-      {/* باکس اطلاعات ترافیک و زمان واقعی */}
-      {trafficInfo && (
-        <div className="absolute top-4 right-4 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-xl p-3 text-white shadow-2xl flex items-center gap-4 text-xs">
-          <div>
-            <span className="text-slate-400 block">مسافت</span>
-            <span className="font-bold text-sm text-slate-100">
-              {trafficInfo.distanceKm} کیلومتر
-            </span>
-          </div>
-          <div className="h-7 w-[1px] bg-slate-700"></div>
-          <div>
-            <span className="text-slate-400 block">زمان با ترافیک</span>
-            <span className="font-bold text-sm text-amber-400">
-              {trafficInfo.durationMins} دقیقه
-            </span>
-          </div>
-          {trafficInfo.trafficDelayMins > 0 && (
-            <>
-              <div className="h-7 w-[1px] bg-slate-700"></div>
-              <div>
-                <span className="text-rose-400 block">تأخیر ترافیک</span>
-                <span className="font-bold text-rose-300">
-                  +{trafficInfo.trafficDelayMins} دقیقه
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       <MapContainer
-        center={defaultCenter}
-        zoom={zoom}
-        scrollWheelZoom={true}
-        className="h-full w-full rounded-2xl z-0"
+        center={center}
+        zoom={14}
+        scrollWheelZoom
+        zoomControl
+        attributionControl
+        className="h-full w-full"
+        style={{
+          height: '100%',
+          width: '100%',
+        }}
       >
-        {/* نقشه پایه استایل تیره یا روشن */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* لایه ترافیک زنده جهانی OpenStreetMap / TomTom */}
-        {showTrafficLayer && (
-          <TileLayer
-            attribution="Traffic Data"
-            url="https://traffic.openterrain.org/{z}/{x}/{y}.png"
-            opacity={0.65}
-          />
-        )}
+        <MapViewportController
+          currentLocation={
+            currentLocation
+          }
+          origin={origin}
+          destination={
+            destination
+          }
+          routeCoordinates={
+            validRoute
+          }
+        />
 
-        {normCurrent && <MapAutoCenter center={normCurrent} />}
-
-        {/* رسم خطوط ترافیک چند رنگ روی مسیر */}
-        {trafficSegments.length > 0 ? (
-          trafficSegments.map((seg, idx) => (
+        <Fragment>
+          {validRoute.length >
+            1 && (
             <Polyline
-              key={idx}
-              positions={seg.points}
+              positions={validRoute.map(
+                (point) => [
+                  point.lat,
+                  point.lng,
+                ],
+              )}
               pathOptions={{
-                color: seg.color,
-                weight: 6,
-                opacity: 0.9,
-                lineCap: 'round',
-                lineJoin: 'round',
+                color: '#2563eb',
+                weight: 5,
+                opacity: 0.85,
               }}
-            >
-              <Popup>{seg.statusText}</Popup>
-            </Polyline>
-          ))
-        ) : routeCoordinates.length > 1 ? (
-          <Polyline
-            positions={routeCoordinates}
-            pathOptions={{ color: '#2563eb', weight: 6, opacity: 0.85 }}
-          />
-        ) : null}
+            />
+          )}
 
-        {normOrigin && (
-          <Marker position={normOrigin} icon={originIcon}>
-            <Popup>{origin?.name || 'مبدأ'}</Popup>
-          </Marker>
-        )}
+          <CircleMarker
+            center={[
+              origin.lat,
+              origin.lng,
+            ]}
+            radius={9}
+            pathOptions={{
+              color: '#059669',
+              fillColor:
+                '#10b981',
+              fillOpacity: 1,
+              weight: 3,
+            }}
+          >
+            <Popup>
+              <div
+                dir="rtl"
+                className="min-w-32 text-right"
+              >
+                <strong>
+                  مبدأ مأموریت
+                </strong>
 
-        {normDest && (
-          <Marker position={normDest} icon={destIcon}>
-            <Popup>{destination?.name || 'مقصد'}</Popup>
-          </Marker>
-        )}
+                <div className="mt-1">
+                  {origin.name}
+                </div>
+              </div>
+            </Popup>
+          </CircleMarker>
 
-        {normCurrent && (
-          <Marker position={normCurrent} icon={truckIcon}>
-            <Popup>موقعیت فعلی شما</Popup>
-          </Marker>
-        )}
+          <CircleMarker
+            center={[
+              destination.lat,
+              destination.lng,
+            ]}
+            radius={9}
+            pathOptions={{
+              color: '#dc2626',
+              fillColor:
+                '#ef4444',
+              fillOpacity: 1,
+              weight: 3,
+            }}
+          >
+            <Popup>
+              <div
+                dir="rtl"
+                className="min-w-32 text-right"
+              >
+                <strong>
+                  مقصد مأموریت
+                </strong>
+
+                <div className="mt-1">
+                  {
+                    destination.name
+                  }
+                </div>
+              </div>
+            </Popup>
+          </CircleMarker>
+
+          {currentLocation &&
+            isValidCoordinate(
+              currentLocation.lat,
+              currentLocation.lng,
+            ) && (
+              <Marker
+                position={[
+                  currentLocation.lat,
+                  currentLocation.lng,
+                ]}
+                icon={
+                  vehicleIcon
+                }
+              >
+                <Popup>
+                  <div
+                    dir="rtl"
+                    className="text-right"
+                  >
+                    <strong>
+                      موقعیت خودرو
+                    </strong>
+
+                    <div className="mt-1 text-xs">
+                      جهت حرکت:{' '}
+                      {Math.round(
+                        heading,
+                      ).toLocaleString(
+                        'fa-IR',
+                      )}
+                      °
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+        </Fragment>
       </MapContainer>
+
+      {showTrafficLayer && (
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-[10px] font-bold text-neutral-600 shadow-sm backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-neutral-300">
+          مسیر زنده
+        </div>
+      )}
     </div>
   );
 }
+
+export default DriverNavigationMap;
