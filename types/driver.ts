@@ -20,7 +20,13 @@ export interface CreateDriverRequest {
   password: string;
 }
 
-export interface UpdateDriverRequest extends CreateDriverRequest {
+export interface UpdateDriverRequest {
   id: number;
-  password: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  phone: string;
+  licenseType: number;
+  username: string;
+  password?: string;
 }
