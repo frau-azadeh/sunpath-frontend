@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Vehicle } from '@/types/fleet';
+import type { Vehicle } from '@/types/vehicle';
 
 declare global {
   interface Window {
@@ -27,7 +27,9 @@ interface VehicleState {
     heading?: number,
   ) => void;
 
-  setSelectedVehicleId: (id: number | string | null) => void;
+  setSelectedVehicleId: (
+    id: number | string | null,
+  ) => void;
 
   upsertVehicleRealtime: (
     payload: Partial<Vehicle> & {
@@ -35,179 +37,346 @@ interface VehicleState {
     },
   ) => void;
 
-  removeVehicle: (id: number | string) => void;
+  removeVehicle: (
+    id: number | string,
+  ) => void;
 }
 
 function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
-    return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
+  if (
+    typeof window !== 'undefined' &&
+    window.CONFIG?.NEXT_PUBLIC_API_BASE
+  ) {
+    return String(
+      window.CONFIG.NEXT_PUBLIC_API_BASE,
+    ).replace(/\/+$/, '');
   }
 
   return '';
 }
 
-function normalizeList(data: any): any[] {
+function normalizeList(
+  data: unknown,
+): unknown[] {
   if (Array.isArray(data)) {
     return data;
   }
 
-  if (Array.isArray(data?.items)) {
-    return data.items;
-  }
+  if (
+    typeof data === 'object' &&
+    data !== null
+  ) {
+    const objectData = data as {
+      items?: unknown;
+      data?: unknown;
+    };
 
-  if (Array.isArray(data?.data)) {
-    return data.data;
+    if (Array.isArray(objectData.items)) {
+      return objectData.items;
+    }
+
+    if (Array.isArray(objectData.data)) {
+      return objectData.data;
+    }
   }
 
   return [];
 }
 
-export const useVehicleStore = create<VehicleState>((set) => ({
-  vehicles: [],
+export const useVehicleStore =
+  create<VehicleState>((set) => ({
+    vehicles: [],
 
-  selectedVehicleId: null,
+    selectedVehicleId: null,
 
-  isLoading: false,
+    isLoading: false,
 
-  loadVehicles: async () => {
-    set({
-      isLoading: true,
-    });
-
-    try {
-      const apiBaseUrl = getApiBaseUrl();
-
-      const response = await fetch(`${apiBaseUrl}/api/Vehicles`, {
-        method: 'GET',
-
-        headers: {
-          Accept: 'application/json',
-        },
-
-        cache: 'no-store',
+    loadVehicles: async () => {
+      set({
+        isLoading: true,
       });
 
-      if (!response.ok) {
-        throw new Error(`GET /api/Vehicles failed: ${response.status}`);
-      }
+      try {
+        const apiBaseUrl =
+          getApiBaseUrl();
 
-      const data = await response.json();
+        const response = await fetch(
+          `${apiBaseUrl}/api/Vehicles`,
+          {
+            method: 'GET',
 
-      const list = normalizeList(data);
+            headers: {
+              Accept:
+                'application/json',
+            },
 
-      const normalized: Vehicle[] = list.map((vehicle: any) => {
-        const id = vehicle.id ?? vehicle.vehicleId;
-
-        const latitude = Number(
-          vehicle.latitude ?? vehicle.lastLatitude ?? vehicle.lat ?? 0,
+            cache: 'no-store',
+          },
         );
 
-        const longitude = Number(
-          vehicle.longitude ?? vehicle.lastLongitude ?? vehicle.lng ?? 0,
-        );
-
-        return {
-          ...vehicle,
-
-          id,
-
-          latitude,
-
-          longitude,
-
-          lastLatitude: Number(vehicle.lastLatitude ?? latitude),
-
-          lastLongitude: Number(vehicle.lastLongitude ?? longitude),
-
-          speed: Number(vehicle.speed ?? 0),
-
-          heading: Number(vehicle.heading ?? 0),
-
-          plateNumber: vehicle.plateNumber ?? `خودرو ${id}`,
-        };
-      });
-
-      set({
-        vehicles: normalized,
-
-        isLoading: false,
-      });
-    } catch (error) {
-      console.error('[VehicleStore] loadVehicles error:', error);
-
-      set({
-        isLoading: false,
-      });
-    }
-  },
-
-  updateVehiclePosition: (id, lat, lng, speed = 0, heading = 0) => {
-    set((state) => ({
-      vehicles: state.vehicles.map((vehicle) => {
-        if (String(vehicle.id) !== String(id)) {
-          return vehicle;
+        if (!response.ok) {
+          throw new Error(
+            `GET /api/Vehicles failed: ${response.status}`,
+          );
         }
 
-        return {
-          ...vehicle,
+        const data: unknown =
+          await response.json();
 
-          latitude: Number(lat),
+        const list =
+          normalizeList(data);
 
-          longitude: Number(lng),
+        const normalized: Vehicle[] =
+          list.map((item) => {
+            const vehicle =
+              item as Partial<Vehicle> & {
+                vehicleId?: number;
+                lat?: number;
+                lng?: number;
+              };
 
-          lastLatitude: Number(lat),
+            const id =
+              vehicle.id ??
+              vehicle.vehicleId ??
+              0;
 
-          lastLongitude: Number(lng),
+            const latitudeValue =
+              vehicle.latitude ??
+              vehicle.lastLatitude ??
+              vehicle.lat ??
+              null;
 
-          speed: Number(speed),
+            const longitudeValue =
+              vehicle.longitude ??
+              vehicle.lastLongitude ??
+              vehicle.lng ??
+              null;
 
-          heading: Number(heading),
-        };
-      }),
-    }));
-  },
+            const latitude =
+              latitudeValue == null
+                ? null
+                : Number(
+                    latitudeValue,
+                  );
 
-  setSelectedVehicleId: (id) => {
-    set({
-      selectedVehicleId: id,
-    });
-  },
+            const longitude =
+              longitudeValue == null
+                ? null
+                : Number(
+                    longitudeValue,
+                  );
 
-  upsertVehicleRealtime: (payload) => {
-    set((state) => {
-      const index = state.vehicles.findIndex(
-        (vehicle) => String(vehicle.id) === String(payload.id),
-      );
+            return {
+              id: Number(id),
 
-      if (index === -1) {
-        return {
-          vehicles: [...state.vehicles, payload as Vehicle],
-        };
+              plateNumber:
+                vehicle.plateNumber ??
+                `خودرو ${id}`,
+
+              model:
+                vehicle.model ?? null,
+
+              status:
+                Number(
+                  vehicle.status ?? 0,
+                ) === 1
+                  ? 1
+                  : 0,
+
+              lastLatitude:
+                vehicle.lastLatitude ==
+                null
+                  ? latitude
+                  : Number(
+                      vehicle.lastLatitude,
+                    ),
+
+              lastLongitude:
+                vehicle.lastLongitude ==
+                null
+                  ? longitude
+                  : Number(
+                      vehicle.lastLongitude,
+                    ),
+
+              lastUpdateAt:
+                vehicle.lastUpdateAt ??
+                null,
+
+              speed: Number(
+                vehicle.speed ?? 0,
+              ),
+
+              heading: Number(
+                vehicle.heading ?? 0,
+              ),
+
+              latitude,
+
+              longitude,
+
+              lastUpdate:
+                vehicle.lastUpdate ??
+                null,
+
+              vehicleType: Number(
+                vehicle.vehicleType ?? 0,
+              ) as Vehicle['vehicleType'],
+
+              insuranceNumber:
+                vehicle.insuranceNumber ??
+                null,
+
+              insuranceExpiryDate:
+                vehicle.insuranceExpiryDate ??
+                null,
+
+              currentDriverId:
+                vehicle.currentDriverId ??
+                null,
+
+              currentDriverName:
+                vehicle.currentDriverName ??
+                null,
+            };
+          });
+
+        set({
+          vehicles: normalized,
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error(
+          '[VehicleStore] loadVehicles error:',
+          error,
+        );
+
+        set({
+          isLoading: false,
+        });
       }
+    },
 
-      const vehicles = [...state.vehicles];
+    updateVehiclePosition: (
+      id,
+      lat,
+      lng,
+      speed = 0,
+      heading = 0,
+    ) => {
+      set((state) => ({
+        vehicles:
+          state.vehicles.map(
+            (vehicle) => {
+              if (
+                String(vehicle.id) !==
+                String(id)
+              ) {
+                return vehicle;
+              }
 
-      vehicles[index] = {
-        ...vehicles[index],
-        ...payload,
-      };
+              return {
+                ...vehicle,
 
-      return {
-        vehicles,
-      };
-    });
-  },
+                latitude:
+                  Number(lat),
 
-  removeVehicle: (id) => {
-    set((state) => ({
-      vehicles: state.vehicles.filter(
-        (vehicle) => String(vehicle.id) !== String(id),
-      ),
+                longitude:
+                  Number(lng),
 
-      selectedVehicleId:
-        String(state.selectedVehicleId) === String(id)
-          ? null
-          : state.selectedVehicleId,
-    }));
-  },
-}));
+                lastLatitude:
+                  Number(lat),
+
+                lastLongitude:
+                  Number(lng),
+
+                speed:
+                  Number(speed),
+
+                heading:
+                  Number(heading),
+              };
+            },
+          ),
+      }));
+    },
+
+    setSelectedVehicleId: (
+      id,
+    ) => {
+      set({
+        selectedVehicleId: id,
+      });
+    },
+
+    upsertVehicleRealtime: (
+      payload,
+    ) => {
+      set((state) => {
+        const index =
+          state.vehicles.findIndex(
+            (vehicle) =>
+              String(
+                vehicle.id,
+              ) ===
+              String(
+                payload.id,
+              ),
+          );
+
+        if (index === -1) {
+          /*
+           * برای اضافه شدن یک خودرو به Store
+           * باید payload کامل Vehicle باشد.
+           */
+          const newVehicle =
+            payload as Vehicle;
+
+          return {
+            vehicles: [
+              ...state.vehicles,
+              newVehicle,
+            ],
+          };
+        }
+
+        const vehicles = [
+          ...state.vehicles,
+        ];
+
+        vehicles[index] = {
+          ...vehicles[index],
+          ...payload,
+          id: Number(
+            payload.id,
+          ),
+        };
+
+        return {
+          vehicles,
+        };
+      });
+    },
+
+    removeVehicle: (
+      id,
+    ) => {
+      set((state) => ({
+        vehicles:
+          state.vehicles.filter(
+            (vehicle) =>
+              String(
+                vehicle.id,
+              ) !==
+              String(id),
+          ),
+
+        selectedVehicleId:
+          String(
+            state.selectedVehicleId,
+          ) === String(id)
+            ? null
+            : state.selectedVehicleId,
+      }));
+    },
+  }));
