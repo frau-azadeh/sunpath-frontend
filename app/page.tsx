@@ -121,10 +121,7 @@ export default function SunPathDashboard() {
 
         setDispatches(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error(
-          '[Dashboard] load dispatches error:',
-          error,
-        );
+        console.error('[Dashboard] load dispatches error:', error);
 
         if (!mounted) {
           return;
@@ -203,10 +200,7 @@ export default function SunPathDashboard() {
 
     const activeDispatches = dispatches.filter(isActiveDispatch);
 
-    const source =
-      activeDispatches.length > 0
-        ? activeDispatches
-        : dispatches;
+    const source = activeDispatches.length > 0 ? activeDispatches : dispatches;
 
     let latest = source[0];
 
@@ -233,8 +227,7 @@ export default function SunPathDashboard() {
     }
 
     const vehicle = vehicles.find(
-      (item) =>
-        String(item.id) === String(latestDispatch.vehicleId),
+      (item) => String(item.id) === String(latestDispatch.vehicleId),
     );
 
     return vehicle ?? null;
@@ -339,9 +332,7 @@ export default function SunPathDashboard() {
               }}
               className="fixed right-4 top-4 z-50 h-[calc(100vh-2rem)] w-[280px] overflow-hidden rounded-3xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 lg:hidden"
             >
-              <Sidebar
-                onNavigate={() => setMobileSidebarOpen(false)}
-              />
+              <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
             </motion.aside>
           )}
         </AnimatePresence>
@@ -410,9 +401,7 @@ export default function SunPathDashboard() {
                   </div>
 
                   <div>
-                    <h3 className="font-semibold">
-                      نقشه زنده
-                    </h3>
+                    <h3 className="font-semibold">نقشه زنده</h3>
 
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       نمایش موقعیت خودروها و حرکت لحظه‌ای
@@ -448,36 +437,18 @@ export default function SunPathDashboard() {
               className="flex min-h-0 flex-col gap-4"
             >
               {/* Latest Dispatch */}
-              <PanelCard
-                title="آخرین مأموریت"
-                icon={<Navigation size={18} />}
-              >
+              <PanelCard title="آخرین مأموریت" icon={<Navigation size={18} />}>
                 {isLoadingDispatches ? (
                   <>
-                    <PanelRow
-                      label="خودرو"
-                      value="..."
-                    />
+                    <PanelRow label="خودرو" value="..." />
 
-                    <PanelRow
-                      label="راننده"
-                      value="..."
-                    />
+                    <PanelRow label="راننده" value="..." />
 
-                    <PanelRow
-                      label="مبدأ"
-                      value="..."
-                    />
+                    <PanelRow label="مبدأ" value="..." />
 
-                    <PanelRow
-                      label="مقصد"
-                      value="..."
-                    />
+                    <PanelRow label="مقصد" value="..." />
 
-                    <PanelRow
-                      label="وضعیت"
-                      value="..."
-                    />
+                    <PanelRow label="وضعیت" value="..." />
                   </>
                 ) : latestDispatch ? (
                   <>
@@ -505,10 +476,7 @@ export default function SunPathDashboard() {
                       value={destinationTitle}
                     />
 
-                    <PanelRow
-                      label="وضعیت"
-                      value={dispatchStatus}
-                    />
+                    <PanelRow label="وضعیت" value={dispatchStatus} />
                   </>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center dark:border-neutral-800">
@@ -517,27 +485,19 @@ export default function SunPathDashboard() {
                       className="mx-auto mb-3 text-neutral-400"
                     />
 
-                    <p className="text-sm font-medium">
-                      مأموریتی ثبت نشده است
-                    </p>
+                    <p className="text-sm font-medium">مأموریتی ثبت نشده است</p>
 
                     <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      پس از ایجاد مأموریت، خودرو، راننده، مبدأ و مقصد
-                      اینجا نمایش داده می‌شود.
+                      پس از ایجاد مأموریت، خودرو، راننده، مبدأ و مقصد اینجا
+                      نمایش داده می‌شود.
                     </p>
                   </div>
                 )}
               </PanelCard>
 
               {/* Fleet Summary */}
-              <PanelCard
-                title="خلاصه ناوگان"
-                icon={<Activity size={18} />}
-              >
-                <PanelRow
-                  label="سواری"
-                  value={formatStatValue(stats.cars)}
-                />
+              <PanelCard title="خلاصه ناوگان" icon={<Activity size={18} />}>
+                <PanelRow label="سواری" value={formatStatValue(stats.cars)} />
 
                 <PanelRow
                   label="وانت / کامیون"
@@ -604,20 +564,14 @@ function Header({
           aria-label="تغییر حالت نمایش"
           className="rounded-xl border border-neutral-200 p-2 text-neutral-700 dark:border-neutral-800 dark:text-neutral-200"
         >
-          {theme === 'dark' ? (
-            <Sun size={18} />
-          ) : (
-            <Moon size={18} />
-          )}
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         <div className="hidden items-center gap-3 rounded-xl border border-neutral-200 px-3 py-2 dark:border-neutral-800 md:flex">
           <div className="h-8 w-8 rounded-full border border-neutral-300 bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800" />
 
           <div className="text-right">
-            <p className="text-sm font-medium leading-4">
-              Azadeh
-            </p>
+            <p className="text-sm font-medium leading-4">Azadeh</p>
 
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
               Admin
@@ -656,9 +610,7 @@ function StatCard({
             {title}
           </p>
 
-          <p className="mt-2 text-2xl font-bold">
-            {value}
-          </p>
+          <p className="mt-2 text-2xl font-bold">{value}</p>
         </div>
 
         <div className="rounded-2xl border border-neutral-200 p-3 text-orange-500 dark:border-neutral-800">
@@ -687,27 +639,17 @@ function PanelCard({
           {icon}
         </span>
 
-        <h4 className="font-semibold">
-          {title}
-        </h4>
+        <h4 className="font-semibold">{title}</h4>
       </div>
 
-      <div className="space-y-3">
-        {children}
-      </div>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
 
 /* ------------------------------ Panel Row ------------------------------ */
 
-function PanelRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function PanelRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
       <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
@@ -740,15 +682,10 @@ function InfoRow({
       <div className="mb-1.5 flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
         {icon}
 
-        <span className="text-xs">
-          {label}
-        </span>
+        <span className="text-xs">{label}</span>
       </div>
 
-      <p
-        className="truncate text-sm font-medium"
-        title={value}
-      >
+      <p className="truncate text-sm font-medium" title={value}>
         {value}
       </p>
     </div>
