@@ -1,291 +1,323 @@
-// src/services/signalrService.ts
+'use client';
+
 import * as signalR from '@microsoft/signalr';
 
+import { useMissionStore } from '@/store/useMissionStore';
 import { useVehicleStore } from '@/store/useVehicleStore';
-import type { Vehicle } from '@/types/fleet';
 
-export type VehiclePayload = {
-  id?: number | string;
-  vehicleId?: number | string;
-  plateNumber?: string | null;
-  status?: number | string | null;
-  latitude?: number | string | null;
-  longitude?: number | string | null;
-  lat?: number | string | null;
-  lng?: number | string | null;
-  lon?: number | string | null;
-  lastLatitude?: number | string | null;
-  lastLongitude?: number | string | null;
-  speed?: number | string | null;
-  heading?: number | string | null;
-  lastUpdate?: string | null;
-  originLat?: number | string | null;
-  originLng?: number | string | null;
-  destinationLat?: number | string | null;
-  destinationLng?: number | string | null;
-  originAddress?: string | null;
-  destinationAddress?: string | null;
-  activeDispatchId?: number | null;
-  activeDispatchDriverId?: number | null;
-  dispatchStatus?: string | null;
-  fuelConsumedLiters?: number | null;
-  tripDistanceKm?: number | null;
-  tripDurationSeconds?: number | null;
-  stopDurationSeconds?: number | null;
-};
+declare global {
+  interface Window {
+    CONFIG?: {
+      NEXT_PUBLIC_API_BASE?: string;
+    };
+  }
+}
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
+
   private startPromise: Promise<void> | null = null;
-  private stopTimer: ReturnType<typeof setTimeout> | null = null;
-  private configRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private readonly eventPositionChanged = 'VehiclePositionChanged';
-  private readonly eventCreated = 'VehicleCreated';
-  private readonly eventUpdated = 'VehicleUpdated';
-  private readonly eventDeleted = 'VehicleDeleted';
+  private handlersRegistered = false;
 
-  private getHubUrl(): string | null {
-    if (typeof window === 'undefined') {
-      return null;
+  /* =========================================================
+     Base URL
+  ========================================================= */
+
+  private getBaseUrl(): string {
+    if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
+      return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
     }
 
-    const apiBaseUrl = (window as any).CONFIG?.NEXT_PUBLIC_API_BASE?.trim();
-
-    if (!apiBaseUrl) {
-      return null;
-    }
-
-    return `${apiBaseUrl.replace(/\/+$/, '')}/vehicleHub`;
+    return '';
   }
 
-  public startConnection(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
+  /* =========================================================
+     Connection
+  ========================================================= */
 
-    if (this.stopTimer) {
-      clearTimeout(this.stopTimer);
-      this.stopTimer = null;
-    }
-
-    if (this.startPromise) {
-      return;
-    }
-
+  private getConnection(): signalR.HubConnection {
     if (this.connection) {
-      const state = this.connection.state;
-
-      if (
-        state === signalR.HubConnectionState.Connected ||
-        state === signalR.HubConnectionState.Connecting ||
-        state === signalR.HubConnectionState.Reconnecting
-      ) {
-        return;
-      }
-
-      this.connection = null;
+      return this.connection;
     }
 
-    const hubUrl = this.getHubUrl();
+    const base = this.getBaseUrl();
 
-    if (!hubUrl) {
-      if (!this.configRetryTimer) {
-        console.log(
-          '[SignalR] Waiting for window.CONFIG.NEXT_PUBLIC_API_BASE...',
-        );
-        this.configRetryTimer = setTimeout(() => {
-          this.configRetryTimer = null;
-          this.startConnection();
-        }, 300);
-      }
-      return;
+    if (!base) {
+      throw new Error('NEXT_PUBLIC_API_BASE تنظیم نشده است.');
     }
 
-    console.log('[SignalR] Starting connection:', hubUrl);
-
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        transport:
-          signalR.HttpTransportType.WebSockets |
-          signalR.HttpTransportType.ServerSentEvents |
-          signalR.HttpTransportType.LongPolling,
-        skipNegotiation: false,
-      })
+    this.connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${base}/vehicleHub`)
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(signalR.LogLevel.Information)
       .build();
 
-    this.connection = connection;
-    this.registerHandlers(connection);
+    this.registerHandlers();
 
-    this.startPromise = connection
-      .start()
-      .then(async () => {
-        console.log('[SignalR] Connected successfully:', hubUrl);
-        try {
-          await connection.invoke('SubscribeLiveMap');
-        } catch (error) {
-          console.warn('[SignalR] Could not subscribe live-map group:', error);
-        }
-      })
-      .catch((error: unknown) => {
-        console.error('[SignalR] Connection start failed:', error);
-
-        if (this.connection === connection) {
-          this.connection = null;
-        }
-      })
-      .finally(() => {
-        this.startPromise = null;
-      });
+    return this.connection;
   }
 
-  private registerHandlers(connection: signalR.HubConnection): void {
-    const handleVehicleUpsert = (eventName: string, data: VehiclePayload) => {
-      console.log(`[SignalR] ${eventName} received:`, data);
+  /* =========================================================
+     Reload
+  ========================================================= */
 
-      const resolvedId = data.id ?? data.vehicleId;
-      if (resolvedId === undefined || resolvedId === null || resolvedId === '') {
-        console.warn(`[SignalR] Ignored ${eventName} due to missing id:`, data);
-        return;
-      }
-
-      const resolvedLat = Number(data.latitude ?? data.lat ?? data.lastLatitude ?? 0);
-      const resolvedLng = Number(data.longitude ?? data.lng ?? data.lon ?? data.lastLongitude ?? 0);
-
-      // ارسال مطمئن با تایپ تضمین‌شده id (حل خطای ts 2345)
-      useVehicleStore.getState().upsertVehicleRealtime({
-        ...data,
-        id: resolvedId,
-        latitude: resolvedLat,
-        longitude: resolvedLng,
-        lastLatitude: resolvedLat,
-        lastLongitude: resolvedLng,
-        speed: Number(data.speed ?? 0),
-        heading: Number(data.heading ?? 0),
-      } as Partial<Vehicle> & { id: number | string });
-    };
-
-    // ۱. ایونت تغییر موقعیت لحظه‌ای
-    connection.on(this.eventPositionChanged, (data: VehiclePayload) => {
-      handleVehicleUpsert(this.eventPositionChanged, data);
-    });
-
-    connection.on('vehicleLocationUpdated', (data: VehiclePayload) => {
-      handleVehicleUpsert('vehicleLocationUpdated', data);
-    });
-
-    // ۲. ایونت ایجاد خودرو جدید
-    connection.on(this.eventCreated, (data: VehiclePayload) => {
-      handleVehicleUpsert(this.eventCreated, data);
-    });
-
-    // ۳. ایونت ویرایش اطلاعات خودرو
-    connection.on(this.eventUpdated, (data: VehiclePayload) => {
-      handleVehicleUpsert(this.eventUpdated, data);
-    });
-
-    // ۴. ایونت حذف خودرو
-    connection.on(
-      this.eventDeleted,
-      (deletedIdPayload: number | string | { id?: number | string; vehicleId?: number | string }) => {
-        console.log(`[SignalR] ${this.eventDeleted} received:`, deletedIdPayload);
-
-        let vehicleId: number | string | undefined;
-
-        if (typeof deletedIdPayload === 'number' || typeof deletedIdPayload === 'string') {
-          vehicleId = deletedIdPayload;
-        } else if (deletedIdPayload && typeof deletedIdPayload === 'object') {
-          vehicleId = deletedIdPayload.id ?? deletedIdPayload.vehicleId;
-        }
-
-        if (vehicleId !== undefined && vehicleId !== null && vehicleId !== '') {
-          useVehicleStore.getState().removeVehicle(vehicleId);
-        } else {
-          console.warn('[SignalR] Invalid vehicle ID in VehicleDeleted:', deletedIdPayload);
-        }
-      },
-    );
-
-    connection.onreconnecting((error) => {
-      console.warn('[SignalR] Reconnecting...', error);
-    });
-
-    connection.onreconnected((connectionId) => {
-      console.log('[SignalR] Reconnected successfully:', connectionId);
-    });
-
-    connection.onclose((error) => {
-      if (error) {
-        console.error('[SignalR] Connection closed with error:', error);
-      } else {
-        console.log('[SignalR] Connection closed.');
-      }
-
-      if (this.connection === connection) {
-        this.connection = null;
-      }
-    });
+  private async reloadVehicles(): Promise<void> {
+    try {
+      await useVehicleStore.getState().loadVehicles();
+    } catch (error) {
+      console.error('[SignalR] reloadVehicles:', error);
+    }
   }
 
-  public stopConnection(): void {
-    if (typeof window === 'undefined') {
+  private async reloadMissions(): Promise<void> {
+    try {
+      await useMissionStore.getState().loadMissions();
+    } catch (error) {
+      console.error('[SignalR] reloadMissions:', error);
+    }
+  }
+
+  private async reloadAll(): Promise<void> {
+    await Promise.allSettled([this.reloadVehicles(), this.reloadMissions()]);
+  }
+
+  /* =========================================================
+     GPS
+  ========================================================= */
+
+  private applyVehiclePosition(payload: any): void {
+    if (!payload) {
       return;
     }
 
-    if (this.configRetryTimer) {
-      clearTimeout(this.configRetryTimer);
-      this.configRetryTimer = null;
+    const vehicleId =
+      payload.vehicleId ?? payload.VehicleId ?? payload.id ?? payload.Id;
+
+    const latitude = Number(
+      payload.latitude ?? payload.Latitude ?? payload.lat,
+    );
+
+    const longitude = Number(
+      payload.longitude ?? payload.Longitude ?? payload.lng,
+    );
+
+    const speed = Number(payload.speed ?? payload.Speed ?? 0);
+
+    const heading = Number(payload.heading ?? payload.Heading ?? 0);
+
+    if (vehicleId == null) {
+      return;
     }
 
-    if (this.stopTimer) {
-      clearTimeout(this.stopTimer);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
     }
 
-    this.stopTimer = setTimeout(() => {
-      this.stopTimer = null;
-      void this.stopConnectionImmediately();
-    }, 500);
+    useVehicleStore
+      .getState()
+      .updateVehiclePosition(vehicleId, latitude, longitude, speed, heading);
   }
 
-  private async stopConnectionImmediately(): Promise<void> {
+  /* =========================================================
+     Events
+  ========================================================= */
+
+  private registerHandlers(): void {
+    if (!this.connection || this.handlersRegistered) {
+      return;
+    }
+
     const connection = this.connection;
 
-    if (!connection) {
+    this.handlersRegistered = true;
+
+    /* =======================================================
+       CREATE MISSION
+    ======================================================= */
+
+    connection.on('DispatchCreated', async (dispatch: any) => {
+      console.log('[SignalR] DispatchCreated', dispatch);
+
+      if (dispatch && dispatch.id != null) {
+        useMissionStore.getState().upsertMission(dispatch);
+      }
+
+      await this.reloadAll();
+    });
+
+    /* =======================================================
+       UPDATE MISSION
+    ======================================================= */
+
+    connection.on('DispatchUpdated', async (dispatch: any) => {
+      console.log('[SignalR] DispatchUpdated', dispatch);
+
+      if (dispatch && dispatch.id != null) {
+        useMissionStore.getState().upsertMission(dispatch);
+      }
+
+      await this.reloadAll();
+    });
+
+    /* =======================================================
+       DELETE MISSION
+    ======================================================= */
+
+    connection.on('DispatchDeleted', async (dispatchId: number | string) => {
+      console.log('[SignalR] DispatchDeleted', dispatchId);
+
+      useMissionStore.getState().removeMission(dispatchId);
+
+      await this.reloadAll();
+    });
+
+    /* =======================================================
+       STATUS
+    ======================================================= */
+
+    connection.on('DispatchStatusChanged', async (dispatch: any) => {
+      console.log('[SignalR] DispatchStatusChanged', dispatch);
+
+      if (dispatch && dispatch.id != null) {
+        useMissionStore.getState().upsertMission(dispatch);
+      }
+
+      await this.reloadAll();
+    });
+
+    /* =======================================================
+       OPTIONAL GENERAL EVENT
+    ======================================================= */
+
+    connection.on('DispatchChanged', async (payload: any) => {
+      console.log('[SignalR] DispatchChanged', payload);
+
+      await this.reloadAll();
+    });
+
+    /* =======================================================
+       VEHICLE UPDATED
+    ======================================================= */
+
+    connection.on('VehicleUpdated', async (payload: any) => {
+      console.log('[SignalR] VehicleUpdated', payload);
+
+      /*
+       * payload این event partial است.
+       * پس برای اطمینان Vehicles را از DB reload می‌کنیم.
+       */
+
+      await this.reloadVehicles();
+    });
+
+    /* =======================================================
+       GPS
+    ======================================================= */
+
+    connection.on('VehiclePositionChanged', (payload: any) => {
+      this.applyVehiclePosition(payload);
+    });
+
+    /*
+     * event قدیمی Backend
+     */
+
+    connection.on('vehicleLocationUpdated', (payload: any) => {
+      this.applyVehiclePosition(payload);
+    });
+
+    /* =======================================================
+       Reconnect
+    ======================================================= */
+
+    connection.onreconnecting((error) => {
+      console.warn('[SignalR] reconnecting', error);
+    });
+
+    connection.onreconnected(async (connectionId) => {
+      console.log('[SignalR] reconnected', connectionId);
+
+      try {
+        await connection.invoke('SubscribeLiveMap');
+      } catch (error) {
+        console.warn('[SignalR] SubscribeLiveMap failed', error);
+      }
+
+      await this.reloadAll();
+    });
+
+    connection.onclose((error) => {
+      console.warn('[SignalR] closed', error);
+    });
+  }
+
+  /* =========================================================
+     START
+  ========================================================= */
+
+  public async startConnection(): Promise<void> {
+    const connection = this.getConnection();
+
+    if (connection.state === signalR.HubConnectionState.Connected) {
+      return;
+    }
+
+    if (connection.state === signalR.HubConnectionState.Reconnecting) {
       return;
     }
 
     if (this.startPromise) {
-      try {
-        await this.startPromise;
-      } catch {
-        // handled
-      }
+      return this.startPromise;
     }
 
-    if (this.connection !== connection) {
-      return;
-    }
+    this.startPromise = connection
+      .start()
+      .then(async () => {
+        console.log('[SignalR] connected:', connection.connectionId);
 
-    if (connection.state === signalR.HubConnectionState.Disconnected) {
-      this.connection = null;
-      return;
-    }
+        try {
+          await connection.invoke('SubscribeLiveMap');
+        } catch (error) {
+          console.warn('[SignalR] SubscribeLiveMap:', error);
+        }
 
-    try {
-      await connection.stop();
-    } catch (error: unknown) {
-      console.error('[SignalR] Error while stopping connection:', error);
-    } finally {
-      if (this.connection === connection) {
-        this.connection = null;
-      }
-    }
+        await this.reloadAll();
+      })
+      .catch((error) => {
+        console.error('[SignalR] connection failed:', error);
+
+        throw error;
+      })
+      .finally(() => {
+        this.startPromise = null;
+      });
+
+    return this.startPromise;
   }
 
-  public getConnectionState(): signalR.HubConnectionState | null {
-    return this.connection?.state ?? null;
+  /* =========================================================
+     STOP
+  ========================================================= */
+
+  public async stopConnection(): Promise<void> {
+    if (!this.connection) {
+      return;
+    }
+
+    if (this.connection.state === signalR.HubConnectionState.Disconnected) {
+      return;
+    }
+
+    await this.connection.stop();
+  }
+
+  /* =========================================================
+     STATE
+  ========================================================= */
+
+  public getState(): signalR.HubConnectionState {
+    return this.connection?.state ?? signalR.HubConnectionState.Disconnected;
   }
 }
 

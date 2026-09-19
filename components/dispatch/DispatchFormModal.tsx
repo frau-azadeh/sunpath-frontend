@@ -1,23 +1,23 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Activity,
   AlertCircle,
   Car,
   CheckCircle2,
+  Clock,
   Flag,
   Loader2,
   MapPin,
+  Milestone,
   Navigation,
+  Send,
   User,
   X,
-  Send,
-  Activity,
-  Clock,
-  Milestone,
 } from 'lucide-react';
 
 import LocationPickerMap from '@/components/dispatch/LocationPickerMap';
@@ -103,18 +103,25 @@ function DispatchFormContent({
     originTitle: initialData?.originTitle ?? '',
     destinationTitle: initialData?.destinationTitle ?? '',
     originCoords:
-      initialData?.originLatitude != null && initialData?.originLongitude != null
+      initialData?.originLatitude != null &&
+      initialData?.originLongitude != null
         ? { lat: initialData.originLatitude, lng: initialData.originLongitude }
         : null,
     destinationCoords:
-      initialData?.destinationLatitude != null && initialData?.destinationLongitude != null
-        ? { lat: initialData.destinationLatitude, lng: initialData.destinationLongitude }
+      initialData?.destinationLatitude != null &&
+      initialData?.destinationLongitude != null
+        ? {
+            lat: initialData.destinationLatitude,
+            lng: initialData.destinationLongitude,
+          }
         : null,
     pickMode: 'origin',
     formError: null,
   }));
 
-  const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(null);
+  const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(
+    null,
+  );
 
   const isEditMode = mode === 'edit';
 
@@ -127,7 +134,16 @@ function DispatchFormContent({
 
     let isMounted = true;
     const calculateEta = async () => {
-      setRouteEstimate((prev) => (prev ? { ...prev, loading: true } : { distanceKm: 0, durationMinutes: 0, durationFormatted: '', loading: true }));
+      setRouteEstimate((prev) =>
+        prev
+          ? { ...prev, loading: true }
+          : {
+              distanceKm: 0,
+              durationMinutes: 0,
+              durationFormatted: '',
+              loading: true,
+            },
+      );
 
       try {
         const url = `https://router.project-osrm.org/route/v1/driving/${form.originCoords!.lng},${form.originCoords!.lat};${form.destinationCoords!.lng},${form.destinationCoords!.lat}?overview=false`;
@@ -151,8 +167,12 @@ function DispatchFormContent({
         if (isMounted) {
           // محاسبه آلترناتیو هندسی (Haversine) با میانگین سرعت ترافیک ۳۵ کیلومتر بر ساعت
           const R = 6371;
-          const dLat = ((form.destinationCoords!.lat - form.originCoords!.lat) * Math.PI) / 180;
-          const dLon = ((form.destinationCoords!.lng - form.originCoords!.lng) * Math.PI) / 180;
+          const dLat =
+            ((form.destinationCoords!.lat - form.originCoords!.lat) * Math.PI) /
+            180;
+          const dLon =
+            ((form.destinationCoords!.lng - form.originCoords!.lng) * Math.PI) /
+            180;
           const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos((form.originCoords!.lat * Math.PI) / 180) *
@@ -205,7 +225,8 @@ function DispatchFormContent({
           ...currentForm,
           originCoords: { lat, lng },
           originTitle:
-            currentForm.originTitle || `مبدأ (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
+            currentForm.originTitle ||
+            `مبدأ (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
           pickMode: 'destination',
         };
       }
@@ -214,7 +235,8 @@ function DispatchFormContent({
         ...currentForm,
         destinationCoords: { lat, lng },
         destinationTitle:
-          currentForm.destinationTitle || `مقصد (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
+          currentForm.destinationTitle ||
+          `مقصد (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
       };
     });
   };
@@ -263,13 +285,16 @@ function DispatchFormContent({
     } catch (error: unknown) {
       setForm((c) => ({
         ...c,
-        formError: error instanceof Error ? error.message : 'خطا در ثبت مأموریت',
+        formError:
+          error instanceof Error ? error.message : 'خطا در ثبت مأموریت',
       }));
     }
   };
 
   const selectedDriverObj = drivers.find((d) => d.id === Number(form.driverId));
-  const selectedVehicleObj = vehicles.find((v) => v.id === Number(form.vehicleId));
+  const selectedVehicleObj = vehicles.find(
+    (v) => v.id === Number(form.vehicleId),
+  );
 
   return (
     <motion.div
@@ -285,7 +310,9 @@ function DispatchFormContent({
           </div>
           <div>
             <h2 className="text-base font-bold text-neutral-900 dark:text-white">
-              {isEditMode ? 'ویرایش مأموریت دیسپچ' : 'تخصیص خودرو و تعریف مأموریت'}
+              {isEditMode
+                ? 'ویرایش مأموریت دیسپچ'
+                : 'تخصیص خودرو و تعریف مأموریت'}
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
               تعیین راننده مجری، پلاک خودرو و محاسبه هوشمند زمان سفر
@@ -390,7 +417,11 @@ function DispatchFormContent({
                 type="text"
                 value={form.title}
                 onChange={(e) =>
-                  setForm((c) => ({ ...c, title: e.target.value, formError: null }))
+                  setForm((c) => ({
+                    ...c,
+                    title: e.target.value,
+                    formError: null,
+                  }))
                 }
                 placeholder="مثال: تحویل محموله شعبه مرکزی"
                 required
@@ -424,7 +455,11 @@ function DispatchFormContent({
                 type="text"
                 value={form.originTitle}
                 onChange={(e) =>
-                  setForm((c) => ({ ...c, originTitle: e.target.value, formError: null }))
+                  setForm((c) => ({
+                    ...c,
+                    originTitle: e.target.value,
+                    formError: null,
+                  }))
                 }
                 placeholder="نام انبار، شرکت یا آدرس مبدأ"
                 required
@@ -441,7 +476,11 @@ function DispatchFormContent({
                 type="text"
                 value={form.destinationTitle}
                 onChange={(e) =>
-                  setForm((c) => ({ ...c, destinationTitle: e.target.value, formError: null }))
+                  setForm((c) => ({
+                    ...c,
+                    destinationTitle: e.target.value,
+                    formError: null,
+                  }))
                 }
                 placeholder="نام تحویل‌گیرنده یا آدرس مقصد"
                 required
@@ -470,7 +509,9 @@ function DispatchFormContent({
 
               <button
                 type="button"
-                onClick={() => setForm((c) => ({ ...c, pickMode: 'destination' }))}
+                onClick={() =>
+                  setForm((c) => ({ ...c, pickMode: 'destination' }))
+                }
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
                   form.pickMode === 'destination'
                     ? 'bg-rose-600 text-white shadow-sm'

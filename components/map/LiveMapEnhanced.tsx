@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   Compass,
@@ -20,471 +21,685 @@ import {
   TileLayer,
   useMap,
 } from 'react-leaflet';
-import L from 'leaflet';
 
 import { signalRService } from '@/services/signalrService';
+import { useDispatchStore } from '@/store/dispatch-store';
 import { useVehicleStore } from '@/store/useVehicleStore';
-import { Vehicle } from '@/types/fleet';
+import type { Dispatch } from '@/types/dispatch';
+import type { Vehicle } from '@/types/fleet';
 
-import VehicleMarker from '../map/VehicleMarker';
+import VehicleMarker from './VehicleMarker';
+
+/* =========================================================
+   Types
+========================================================= */
+
+type MapMode = 'road' | 'satellite' | 'dark';
+
+type VehicleFilter = 'all' | 'moving' | 'stopped';
+
+interface MissionItem {
+  mission: Dispatch;
+
+  vehicle: Vehicle | null;
+
+  currentPosition: [number, number] | null;
+
+  origin: [number, number] | null;
+
+  destination: [number, number] | null;
+}
+
+/* =========================================================
+   Constants
+========================================================= */
 
 const TEHRAN_CENTER: [number, number] = [35.6892, 51.389];
 
-type MapMode = 'road' | 'traffic' | 'satellite' | 'dark';
-type VehicleFilter = 'all' | 'moving' | 'stopped';
-
-interface MapLayerConfig {
-  name: string;
-  url: string;
-  attribution: string;
-  subdomains?: string[];
-}
-
-const MAP_LAYERS: Record<MapMode, MapLayerConfig> = {
+const MAP_LAYERS = {
   road: {
     name: 'جاده‌ای',
+
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
     attribution: '&copy; OpenStreetMap contributors',
   },
-  traffic: {
-    name: 'ترافیک زنده',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap & Traffic Overlay',
-  },
+
   satellite: {
     name: 'ماهواره‌ای',
+
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics',
+
+    attribution: '&copy; Esri',
   },
+
   dark: {
     name: 'تیره',
+
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+
     attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
   },
-};
+} satisfies Record<
+  MapMode,
+  {
+    name: string;
+    url: string;
+    attribution: string;
+  }
+>;
 
-// کاشی‌های لایه ترافیک زنده شهری
-const TRAFFIC_OVERLAY_URL =
-  'https://traffic.openterrain.org/{z}/{x}/{y}.png';
+/* =========================================================
+   Helpers
+========================================================= */
 
-// آیکون‌های مبدأ و مقصد
-const originIcon = L.divIcon({
-  className: 'bg-transparent',
-  html: `
-    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-600 border-2 border-white shadow-md">
-      <span class="w-2.5 h-2.5 bg-white rounded-full"></span>
-    </div>
-  `,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
-const destinationIcon = L.divIcon({
-  className: 'bg-transparent',
-  html: `
-    <div class="flex items-center justify-center w-7 h-7 rounded-full bg-rose-600 border-2 border-white shadow-md animate-bounce">
-      <span class="w-2.5 h-2.5 bg-white rounded-full"></span>
-    </div>
-  `,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+function getPosition(
+  latValue: unknown,
+  lngValue: unknown,
+): [number, number] | null {
+  const lat = Number(latValue);
+  const lng = Number(lngValue);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat === 0 ||
+    lng === 0
+  ) {
+    return null;
+  }
+
+  return [lat, lng];
+}
+
+function getVehiclePosition(vehicle: Vehicle): [number, number] | null {
+  return getPosition(
+    vehicle.latitude ?? vehicle.lastLatitude,
+    vehicle.longitude ?? vehicle.lastLongitude,
+  );
+}
+
+function isActiveDispatch(mission: Dispatch): boolean {
+  const status = String(mission.status ?? '')
+    .trim()
+    .replace(/[\s_-]/g, '')
+    .toLowerCase();
+
+  return (
+    status === '1' ||
+    status === '2' ||
+    status === 'assigned' ||
+    status === 'started' ||
+    status === 'inprogress'
+  );
+}
+
+function getVehicleLabel(vehicle: Vehicle | null, mission: Dispatch): string {
+  return vehicle?.plateNumber || `خودرو ${mission.vehicleId}`;
+}
+
+/* =========================================================
+   Icons
+========================================================= */
+
+function createMissionIcon(
+  type: 'origin' | 'destination',
+  plateNumber: string,
+  missionId: number | string,
+) {
+  const isOrigin = type === 'origin';
+
+  const background = isOrigin ? '#059669' : '#e11d48';
+
+  const title = isOrigin ? '● مبدأ' : '⚑ مقصد';
+
+  return L.divIcon({
+    className: `mission-${type}-marker`,
+
+    html: `
+      <div style="
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        transform:translate(-50%,-100%);
+        white-space:nowrap;
+      ">
+
+        <div style="
+          min-width:100px;
+          padding:7px 10px;
+          background:${background};
+          color:white;
+          border:2px solid white;
+          border-radius:10px;
+          box-shadow:0 4px 14px rgba(0,0,0,.30);
+          text-align:center;
+          direction:rtl;
+          font-family:Vazirmatn,Tahoma,sans-serif;
+        ">
+
+          <div style="
+            font-size:11px;
+            font-weight:800;
+          ">
+            ${title}
+          </div>
+
+          <div style="
+            margin-top:3px;
+            font-size:9px;
+            font-weight:700;
+          ">
+            ${escapeHtml(plateNumber)}
+          </div>
+
+          <div style="
+            font-size:8px;
+            opacity:.85;
+          ">
+            مأموریت #${escapeHtml(missionId)}
+          </div>
+
+        </div>
+
+        <div style="
+          width:0;
+          height:0;
+          border-left:7px solid transparent;
+          border-right:7px solid transparent;
+          border-top:9px solid ${background};
+        "></div>
+
+        <div style="
+          width:11px;
+          height:11px;
+          margin-top:-1px;
+          border-radius:50%;
+          background:${background};
+          border:2px solid white;
+        "></div>
+
+      </div>
+    `,
+
+    iconSize: [0, 0],
+
+    iconAnchor: [0, 0],
+  });
+}
+
+/* =========================================================
+   Map Helpers
+========================================================= */
 
 function MapResizeHandler() {
   const map = useMap();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const timerId = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       map.invalidateSize();
-    }, 250);
+    }, 200);
 
     return () => {
-      window.clearTimeout(timerId);
+      window.clearTimeout(timer);
     };
   }, [map]);
 
   return null;
 }
 
-interface MapViewControllerProps {
-  selectedLat: number | null;
-  selectedLng: number | null;
-}
-
 function MapViewController({
-  selectedLat,
-  selectedLng,
-}: MapViewControllerProps) {
+  position,
+}: {
+  position: [number, number] | null;
+}) {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedLat === null || selectedLng === null) {
+    if (!position) {
       return;
     }
 
-    map.setView([selectedLat, selectedLng], 15, {
+    map.setView(position, 15, {
       animate: true,
     });
-  }, [map, selectedLat, selectedLng]);
+  }, [map, position?.[0], position?.[1]]);
 
   return null;
 }
 
-// کامپوننت رسم خط سیر و مبدا/مقصد خودرو بر اساس داده‌های واقعی
-function ActiveVehicleRoute({ vehicle }: { vehicle: Vehicle }) {
-  const origin = useMemo(() => {
-    const lat = Number(vehicle.originLat ?? vehicle.dispatch?.originLat);
-    const lng = Number(vehicle.originLng ?? vehicle.dispatch?.originLng);
-    return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
-      ? ([lat, lng] as [number, number])
-      : null;
-  }, [vehicle]);
+/* =========================================================
+   Mission Visualization
+========================================================= */
 
-  const destination = useMemo(() => {
-    const lat = Number(vehicle.destinationLat ?? vehicle.dispatch?.destinationLat);
-    const lng = Number(vehicle.destinationLng ?? vehicle.dispatch?.destinationLng);
-    return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
-      ? ([lat, lng] as [number, number])
-      : null;
-  }, [vehicle]);
+function MissionVisualization({ item }: { item: MissionItem }) {
+  const { mission, vehicle, origin, destination } = item;
 
-  const currentPos = useMemo(() => {
-    const lat = Number(vehicle.latitude ?? vehicle.lastLatitude);
-    const lng = Number(vehicle.longitude ?? vehicle.lastLongitude);
-    return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
-      ? ([lat, lng] as [number, number])
-      : null;
-  }, [vehicle.latitude, vehicle.longitude, vehicle.lastLatitude, vehicle.lastLongitude]);
-
-  if (!currentPos) return null;
-
-  // ساخت مسیر پیوسته از مبدا -> موقعیت زنده خودرو -> مقصد
-  const pathPoints: [number, number][] = [];
-  if (origin) pathPoints.push(origin);
-  pathPoints.push(currentPos);
-  if (destination) pathPoints.push(destination);
-
-  const originAddress =
-    vehicle.originAddress || vehicle.dispatch?.originAddress || 'مبدأ مأموریت';
-  const destinationAddress =
-    vehicle.destinationAddress ||
-    vehicle.dispatch?.destinationAddress ||
-    'مقصد مأموریت';
+  const plate = getVehicleLabel(vehicle, mission);
 
   return (
-    <>
-      {origin && (
-        <Marker position={origin} icon={originIcon}>
-          <Popup>
-            <div className="text-xs font-vazir text-right">
-              <span className="font-bold text-emerald-600 block">مبدأ مأموریت</span>
-              <span>{originAddress}</span>
-            </div>
-          </Popup>
-        </Marker>
-      )}
+    <Fragment>
+      {/* Route */}
 
-      {destination && (
-        <Marker position={destination} icon={destinationIcon}>
-          <Popup>
-            <div className="text-xs font-vazir text-right">
-              <span className="font-bold text-rose-600 block">مقصد نهایی</span>
-              <span>{destinationAddress}</span>
-            </div>
-          </Popup>
-        </Marker>
-      )}
-
-      {pathPoints.length >= 2 && (
+      {origin && destination && (
         <Polyline
-          positions={pathPoints}
+          positions={[origin, destination]}
           pathOptions={{
-            color: '#f97316',
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '8, 8',
+            weight: 5,
+            opacity: 0.75,
+            dashArray: '10 8',
           }}
         />
       )}
-    </>
+
+      {/* Origin */}
+
+      {origin && (
+        <Marker
+          position={origin}
+          icon={createMissionIcon('origin', plate, mission.id)}
+          zIndexOffset={800}
+        >
+          <Popup>
+            <div dir="rtl" className="min-w-[180px] text-right text-xs">
+              <strong className="block text-emerald-600">مبدأ مأموریت</strong>
+
+              <div className="mt-1">
+                {mission.originTitle || 'مبدأ مأموریت'}
+              </div>
+
+              <div className="mt-2 text-neutral-500">خودرو: {plate}</div>
+
+              <div className="text-neutral-400">مأموریت #{mission.id}</div>
+
+              {!vehicle && (
+                <div className="mt-2 text-amber-600">
+                  اطلاعات خودرو هنوز بارگذاری نشده است.
+                </div>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {/* Destination */}
+
+      {destination && (
+        <Marker
+          position={destination}
+          icon={createMissionIcon('destination', plate, mission.id)}
+          zIndexOffset={800}
+        >
+          <Popup>
+            <div dir="rtl" className="min-w-[180px] text-right text-xs">
+              <strong className="block text-rose-600">مقصد مأموریت</strong>
+
+              <div className="mt-1">
+                {mission.destinationTitle || 'مقصد مأموریت'}
+              </div>
+
+              <div className="mt-2 text-neutral-500">خودرو: {plate}</div>
+
+              <div className="text-neutral-400">مأموریت #{mission.id}</div>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+    </Fragment>
   );
 }
 
+/* =========================================================
+   Main
+========================================================= */
+
 export default function LiveMapEnhanced() {
+  /* =======================================================
+     Vehicle Store
+  ======================================================= */
+
   const vehicles = useVehicleStore((state) => state.vehicles);
+
+  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+
   const selectedVehicleId = useVehicleStore((state) => state.selectedVehicleId);
+
   const setSelectedVehicleId = useVehicleStore(
     (state) => state.setSelectedVehicleId,
   );
-  const loadVehicles = useVehicleStore((state) => state.loadVehicles);
+
+  /* =======================================================
+     Dispatch Store
+
+     این دقیقاً همان Store صفحه تخصیص است.
+  ======================================================= */
+
+  const dispatches = useDispatchStore((state) => state.dispatches);
+
+  const fetchDispatches = useDispatchStore((state) => state.fetchDispatches);
+
+  /* =======================================================
+     UI
+  ======================================================= */
 
   const [filter, setFilter] = useState<VehicleFilter>('all');
+
   const [mapMode, setMapMode] = useState<MapMode>('road');
-  const [showTrafficOverlay, setShowTrafficOverlay] = useState(true);
-  const [showRoutesForAllMoving, setShowRoutesForAllMoving] = useState(false);
+
+  const [showMissionEndpoints, setShowMissionEndpoints] = useState(true);
+
+  /* =======================================================
+     Initial Load
+  ======================================================= */
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    void Promise.allSettled([loadVehicles(), fetchDispatches()]);
 
-    const setupLeafletIcons = async () => {
-      const leaflet = await import('leaflet');
+    void signalRService.startConnection().catch((error) => {
+      console.error('[LiveMapEnhanced] SignalR:', error);
+    });
+  }, [loadVehicles, fetchDispatches]);
 
-      leaflet.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl:
-          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  /* =======================================================
+     Join Dispatches + Vehicles
+  ======================================================= */
+
+  const missionItems = useMemo<MissionItem[]>(() => {
+    const result: MissionItem[] = [];
+
+    for (const mission of dispatches) {
+      /*
+       * فقط مأموریت‌های Assigned / Started
+       */
+
+      if (!isActiveDispatch(mission)) {
+        continue;
+      }
+
+      /*
+       * Vehicle ممکن است هنوز لود نشده باشد.
+       * این نباید باعث حذف Mission شود.
+       */
+
+      const vehicle =
+        mission.vehicleId != null
+          ? (vehicles.find(
+              (item) => String(item.id) === String(mission.vehicleId),
+            ) ?? null)
+          : null;
+
+      const currentPosition = vehicle ? getVehiclePosition(vehicle) : null;
+
+      const origin = getPosition(
+        mission.originLatitude,
+        mission.originLongitude,
+      );
+
+      const destination = getPosition(
+        mission.destinationLatitude,
+        mission.destinationLongitude,
+      );
+
+      result.push({
+        mission,
+        vehicle,
+        currentPosition,
+        origin,
+        destination,
       });
-    };
+    }
 
-    void setupLeafletIcons();
-  }, []);
+    return result;
+  }, [dispatches, vehicles]);
 
-  useEffect(() => {
-    void loadVehicles();
-    void signalRService.startConnection();
-  }, [loadVehicles]);
+  /* =======================================================
+     Vehicle Filter
 
-  const validVehicles = useMemo(() => {
-    return vehicles.filter((vehicle) => {
-      const latitude = Number(vehicle.latitude ?? vehicle.lastLatitude);
-      const longitude = Number(vehicle.longitude ?? vehicle.lastLongitude);
-      const speed = Number(vehicle.speed);
+     این فیلتر Mission را حذف نمی‌کند.
+  ======================================================= */
 
-      if (
-        !Number.isFinite(latitude) ||
-        !Number.isFinite(longitude) ||
-        latitude === 0 ||
-        longitude === 0
-      ) {
+  const visibleVehicleItems = useMemo(() => {
+    return missionItems.filter((item) => {
+      if (!item.vehicle || !item.currentPosition) {
         return false;
       }
+
+      const speed = Number(item.vehicle.speed ?? 0);
 
       if (filter === 'moving') {
         return speed > 0;
       }
 
       if (filter === 'stopped') {
-        return speed === 0;
+        return speed <= 0;
       }
 
       return true;
     });
-  }, [vehicles, filter]);
+  }, [missionItems, filter]);
 
-  const selectedVehicle = useMemo(
-    () => vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null,
-    [vehicles, selectedVehicleId],
-  );
+  /* =======================================================
+     Selected
+  ======================================================= */
 
-  const selectedLatitude = selectedVehicle
-    ? Number(selectedVehicle.latitude ?? selectedVehicle.lastLatitude)
-    : null;
+  const selectedItem = useMemo(() => {
+    if (selectedVehicleId == null) {
+      return null;
+    }
 
-  const selectedLongitude = selectedVehicle
-    ? Number(selectedVehicle.longitude ?? selectedVehicle.lastLongitude)
-    : null;
+    return (
+      missionItems.find(
+        (item) =>
+          item.vehicle && String(item.vehicle.id) === String(selectedVehicleId),
+      ) ?? null
+    );
+  }, [missionItems, selectedVehicleId]);
 
-  const originText =
-    selectedVehicle?.originAddress || selectedVehicle?.dispatch?.originAddress;
-  const destText =
-    selectedVehicle?.destinationAddress ||
-    selectedVehicle?.dispatch?.destinationAddress;
+  const selectedMapPosition =
+    selectedItem?.currentPosition ??
+    selectedItem?.origin ??
+    selectedItem?.destination ??
+    null;
+
+  /* =======================================================
+     Render
+  ======================================================= */
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="relative h-full w-full">
-        <MapContainer
-          center={TEHRAN_CENTER}
-          zoom={12}
-          className="z-0 h-full w-full"
-          style={{ height: '100%', width: '100%' }}
-        >
-          <MapResizeHandler />
+    <div className="relative h-full w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-100">
+      <MapContainer
+        center={TEHRAN_CENTER}
+        zoom={12}
+        className="z-0 h-full w-full"
+        style={{
+          height: '100%',
+          width: '100%',
+        }}
+      >
+        <MapResizeHandler />
 
-          <MapViewController
-            selectedLat={
-              Number.isFinite(selectedLatitude ?? NaN) ? selectedLatitude : null
-            }
-            selectedLng={
-              Number.isFinite(selectedLongitude ?? NaN)
-                ? selectedLongitude
-                : null
-            }
-          />
+        <MapViewController position={selectedMapPosition} />
 
-          <TileLayer
-            key={mapMode}
-            url={MAP_LAYERS[mapMode].url}
-            attribution={MAP_LAYERS[mapMode].attribution}
-          />
+        <TileLayer
+          key={mapMode}
+          url={MAP_LAYERS[mapMode].url}
+          attribution={MAP_LAYERS[mapMode].attribution}
+        />
 
-          {/* لایه زنده ترافیک خیابان‌ها */}
-          {(mapMode === 'traffic' || showTrafficOverlay) && (
-            <TileLayer
-              url={TRAFFIC_OVERLAY_URL}
-              opacity={0.65}
-              zIndex={400}
+        {/* ================================================
+            MISSIONS
+
+            مستقل از GPS خودرو
+        ================================================= */}
+
+        {showMissionEndpoints &&
+          missionItems.map((item) => (
+            <MissionVisualization
+              key={`mission-${item.mission.id}`}
+              item={item}
             />
-          )}
-
-          {/* نمایش مبدأ، مقصد و مسیر برای خودروی انتخاب‌شده */}
-          {selectedVehicle && <ActiveVehicleRoute vehicle={selectedVehicle} />}
-
-          {/* نمایش مسیر برای همه خودروهای متحرک در صورت فعال بودن سوئیچ */}
-          {showRoutesForAllMoving &&
-            validVehicles
-              .filter(
-                (v) =>
-                  Number(v.speed) > 0 &&
-                  (!selectedVehicle || v.id !== selectedVehicle.id),
-              )
-              .map((v) => <ActiveVehicleRoute key={`route-${v.id}`} vehicle={v} />)}
-
-          {validVehicles.map((vehicle) => (
-            <VehicleMarker key={vehicle.id} vehicle={vehicle} />
           ))}
-        </MapContainer>
 
-        {/* پنل ابزارهای گوشه نقشه */}
-        <div className="absolute right-4 top-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col gap-2">
-          {/* انتخاب لایه نقشه */}
-          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-neutral-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
-            <Layers size={14} className="mr-1 shrink-0 text-orange-500" />
+        {/* ================================================
+            VEHICLES
 
-            {(Object.keys(MAP_LAYERS) as MapMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setMapMode(mode)}
-                className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
-                  mapMode === mode
-                    ? 'bg-orange-500 text-white'
-                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
-                }`}
-              >
-                {MAP_LAYERS[mode].name}
-              </button>
-            ))}
-          </div>
+            فقط خودروهایی که GPS دارند
+        ================================================= */}
 
-          {/* سوئیچ ترافیک و مسیرها */}
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-neutral-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
+        {visibleVehicleItems.map((item) => {
+          if (!item.vehicle) {
+            return null;
+          }
+
+          return (
+            <VehicleMarker
+              key={`vehicle-${item.vehicle.id}`}
+              vehicle={item.vehicle}
+            />
+          );
+        })}
+      </MapContainer>
+
+      {/* =================================================
+          Active Mission Count
+      ================================================= */}
+
+      <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs shadow">
+        مأموریت فعال: <strong>{missionItems.length}</strong>
+      </div>
+
+      {/* =================================================
+          Controls
+      ================================================= */}
+
+      <div className="absolute right-4 top-4 z-[1000] flex flex-col gap-2">
+        {/* Layers */}
+
+        <div className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1 shadow">
+          <Layers size={14} className="mx-1 text-orange-500" />
+
+          {(Object.keys(MAP_LAYERS) as MapMode[]).map((mode) => (
             <button
+              key={mode}
               type="button"
-              onClick={() => setShowTrafficOverlay((prev) => !prev)}
-              className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
-                showTrafficOverlay
-                  ? 'bg-amber-500 text-white'
-                  : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+              onClick={() => setMapMode(mode)}
+              className={`rounded-lg px-2 py-1.5 text-[10px] font-bold ${
+                mapMode === mode
+                  ? 'bg-orange-500 text-white'
+                  : 'text-neutral-500'
               }`}
             >
-              <TrafficCone size={12} />
-              {showTrafficOverlay ? 'ترافیک فعال' : 'ترافیک خاموش'}
+              {MAP_LAYERS[mode].name}
             </button>
+          ))}
+        </div>
 
+        {/* Endpoints */}
+
+        <div className="rounded-xl border border-neutral-200 bg-white/95 p-1 shadow">
+          <button
+            type="button"
+            onClick={() => setShowMissionEndpoints((value) => !value)}
+            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-bold ${
+              showMissionEndpoints
+                ? 'bg-blue-600 text-white'
+                : 'text-neutral-500'
+            }`}
+          >
+            <MapPin size={12} />
+            مبدأ و مقصد
+          </button>
+        </div>
+
+        {/* Vehicle Filters */}
+
+        <div className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1 shadow">
+          <TrafficCone size={13} className="mx-1 text-orange-500" />
+
+          {(['all', 'moving', 'stopped'] as const).map((item) => (
             <button
+              key={item}
               type="button"
-              onClick={() => setShowRoutesForAllMoving((prev) => !prev)}
-              className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
-                showRoutesForAllMoving
-                  ? 'bg-blue-600 text-white'
-                  : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+              onClick={() => setFilter(item)}
+              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${
+                filter === item
+                  ? 'bg-neutral-900 text-white'
+                  : 'text-neutral-500'
               }`}
             >
-              <MapPin size={12} />
-              {showRoutesForAllMoving ? 'تمام مقاصد' : 'فقط خودرو انتخابی'}
+              {item === 'all' ? 'همه' : item === 'moving' ? 'متحرک' : 'متوقف'}
             </button>
-          </div>
-
-          {/* فیلتر خودروها */}
-          <div className="flex w-fit gap-1 rounded-2xl border border-neutral-200 bg-white/90 p-1 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
-            {(['all', 'moving', 'stopped'] as const).map((filterOption) => (
-              <button
-                key={filterOption}
-                type="button"
-                onClick={() => setFilter(filterOption)}
-                className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition-colors ${
-                  filter === filterOption
-                    ? 'bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900'
-                    : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
-                }`}
-              >
-                {filterOption === 'all'
-                  ? 'همه'
-                  : filterOption === 'moving'
-                    ? 'متحرک'
-                    : 'متوقف'}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* اطلاعات خودروی انتخاب شده بر اساس دیتای واقعی */}
-      {selectedVehicle && (
-        <div className="absolute bottom-4 left-4 z-[1000] w-80 max-w-[calc(100%-2rem)] rounded-[20px] border border-neutral-200 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/95">
-          <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
-            <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold">
-              <Navigation className="h-4 w-4 shrink-0 text-orange-500" />
-              <span className="truncate">
-                خودرو {selectedVehicle.plateNumber || selectedVehicle.id}
-              </span>
-            </h3>
+      {/* =================================================
+          Selected Vehicle
+      ================================================= */}
 
-            <button
-              type="button"
-              onClick={() => setSelectedVehicleId(null)}
-              className="shrink-0 text-neutral-400 transition-colors hover:text-neutral-600 dark:hover:text-neutral-200"
-              aria-label="بستن اطلاعات خودرو"
-              title="بستن"
-            >
+      {selectedItem?.vehicle && (
+        <div className="absolute bottom-4 left-4 z-[1000] w-80 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-xl">
+          <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-2">
+            <div className="flex items-center gap-2">
+              <Navigation size={16} className="text-orange-500" />
+
+              <strong className="text-sm">
+                {selectedItem.vehicle.plateNumber ||
+                  `خودرو ${selectedItem.vehicle.id}`}
+              </strong>
+            </div>
+
+            <button type="button" onClick={() => setSelectedVehicleId(null)}>
               <X size={16} />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-            <div className="flex items-center gap-1.5 rounded-lg bg-neutral-100 p-2 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
-              <span className="text-emerald-500">⛽</span>
-              <span>{Number(selectedVehicle.fuelConsumedLiters ?? 0).toFixed(2)} لیتر</span>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-lg bg-neutral-100 p-2 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
-              <span className="text-sky-500">📏</span>
-              <span>{Number(selectedVehicle.tripDistanceKm ?? 0).toFixed(2)} کیلومتر</span>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-lg bg-neutral-100 p-2 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+          <div className="mb-3 rounded-lg bg-blue-50 p-2 text-center text-xs font-bold text-blue-700">
+            مأموریت #{selectedItem.mission.id}
+          </div>
+
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
               <Gauge size={14} className="text-orange-500" />
-              <span>{Number(selectedVehicle.speed) || 0} km/h</span>
+              {Number(selectedItem.vehicle.speed ?? 0)} km/h
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-lg bg-neutral-100 p-2 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+            <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-2 text-xs">
               <Compass size={14} className="text-orange-500" />
-              <span>{Math.round(Number(selectedVehicle.heading)) || 0}°</span>
+              {Math.round(Number(selectedItem.vehicle.heading ?? 0))}°
             </div>
           </div>
 
-          {/* مشخصات مبدأ و مقصد مأموریت واقعی در صورت وجود */}
-          {(originText || destText) && (
-            <div className="space-y-1.5 border-t border-neutral-200 pt-2 text-[11px] dark:border-neutral-800">
-              {originText && (
-                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 truncate">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-neutral-400 shrink-0">مبدأ:</span>
-                  <span className="truncate">{originText}</span>
-                </div>
-              )}
-              {destText && (
-                <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 truncate">
-                  <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                  <span className="text-neutral-400 shrink-0">مقصد:</span>
-                  <span className="truncate">{destText}</span>
-                </div>
-              )}
+          <div className="mb-2 rounded-lg bg-emerald-50 p-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
+              <MapPin size={14} />
+              مبدأ
             </div>
-          )}
+
+            <div className="mt-1 text-xs text-neutral-700">
+              {selectedItem.mission.originTitle || 'مبدأ مأموریت'}
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-rose-50 p-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-rose-700">
+              <MapPin size={14} />
+              مقصد
+            </div>
+
+            <div className="mt-1 text-xs text-neutral-700">
+              {selectedItem.mission.destinationTitle || 'مقصد مأموریت'}
+            </div>
+          </div>
         </div>
       )}
     </div>

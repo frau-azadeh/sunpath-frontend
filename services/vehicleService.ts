@@ -1,54 +1,100 @@
-import { apiRequest } from '@/lib/api/request';
-import type {
-  CreateVehicleRequest,
-  UpdateVehicleRequest,
-  Vehicle,
-} from '@/types/vehicle';
+import type { CreateVehicleRequest, Vehicle } from '@/types/vehicle';
 
-interface VehicleMutationResponse {
-  message: string;
-  data: Vehicle;
-}
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const runtimeConfig = (
+      window as typeof window & {
+        __RUNTIME_CONFIG__?: {
+          API_BASE_URL?: string;
+        };
+      }
+    ).__RUNTIME_CONFIG__;
 
-interface VehicleDeleteResponse {
-  message: string;
+    if (runtimeConfig?.API_BASE_URL) {
+      return runtimeConfig.API_BASE_URL.replace(/\/$/, '');
+    }
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL || 'https://localhost:44341'
+  ).replace(/\/$/, '');
+};
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const text = await response.text();
+
+    throw new Error(text || `خطا در ارتباط با سرور (${response.status})`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
 }
 
 export const vehicleService = {
-  getAll(signal?: AbortSignal): Promise<Vehicle[]> {
-    return apiRequest<Vehicle[]>('/api/vehicles', {
+  async getAll(signal?: AbortSignal): Promise<Vehicle[]> {
+    const response = await fetch(`${getApiBaseUrl()}/api/vehicles`, {
       method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
       signal,
+      cache: 'no-store',
     });
+
+    return handleResponse<Vehicle[]>(response);
   },
 
-  getById(id: number, signal?: AbortSignal): Promise<Vehicle> {
-    return apiRequest<Vehicle>(`/api/vehicles/${id}`, {
+  async getById(id: number, signal?: AbortSignal): Promise<Vehicle> {
+    const response = await fetch(`${getApiBaseUrl()}/api/vehicles/${id}`, {
       method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
       signal,
+      cache: 'no-store',
     });
+
+    return handleResponse<Vehicle>(response);
   },
 
-  create(data: CreateVehicleRequest): Promise<VehicleMutationResponse> {
-    return apiRequest<VehicleMutationResponse>('/api/vehicles', {
+  async create(data: CreateVehicleRequest): Promise<Vehicle> {
+    const response = await fetch(`${getApiBaseUrl()}/api/vehicles`, {
       method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(data),
     });
+
+    return handleResponse<Vehicle>(response);
   },
 
-  update(
-    id: number,
-    data: UpdateVehicleRequest,
-  ): Promise<VehicleMutationResponse> {
-    return apiRequest<VehicleMutationResponse>(`/api/vehicles/${id}`, {
+  async update(id: number, data: CreateVehicleRequest): Promise<Vehicle> {
+    const response = await fetch(`${getApiBaseUrl()}/api/vehicles/${id}`, {
       method: 'PUT',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(data),
     });
+
+    return handleResponse<Vehicle>(response);
   },
 
-  remove(id: number): Promise<VehicleDeleteResponse> {
-    return apiRequest<VehicleDeleteResponse>(`/api/vehicles/${id}`, {
+  async remove(id: number): Promise<void> {
+    const response = await fetch(`${getApiBaseUrl()}/api/vehicles/${id}`, {
       method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+      },
     });
+
+    await handleResponse<void>(response);
   },
 };

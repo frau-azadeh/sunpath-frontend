@@ -1,5 +1,5 @@
-import type { DriverAuthUser } from '@/types/driver-auth';
 import { apiRequest } from '@/lib/api/request';
+import type { DriverAuthUser } from '@/types/driver-auth';
 
 type LoginResponse = {
   success: boolean;
@@ -14,11 +14,15 @@ type LoginResponse = {
 export const driverAuthService = {
   async login(username: string, password: string) {
     try {
-      const response = await apiRequest<LoginResponse>('/api/driverauth/login', {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
-      });
-      if (!response.success) return { success: false, message: response.message || 'خطا در ورود' };
+      const response = await apiRequest<LoginResponse>(
+        '/api/driverauth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ username, password }),
+        },
+      );
+      if (!response.success)
+        return { success: false, message: response.message || 'خطا در ورود' };
       const data: DriverAuthUser = {
         driverId: response.driverId,
         fullName: response.fullName,
@@ -28,7 +32,13 @@ export const driverAuthService = {
       };
       return { success: true, data };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : 'خطا در برقراری ارتباط با سرور' };
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'خطا در برقراری ارتباط با سرور',
+      };
     }
   },
 };

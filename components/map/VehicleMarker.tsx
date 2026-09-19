@@ -16,7 +16,12 @@ function getLatLng(vehicle: Vehicle): [number, number] | null {
   const lat = Number(vehicle.latitude);
   const lng = Number(vehicle.longitude);
 
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat === 0 ||
+    lng === 0
+  ) {
     return null;
   }
 
@@ -116,7 +121,9 @@ export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
           </div>
           <div className="mt-1 flex justify-between text-[11px] text-neutral-600 dark:text-neutral-300">
             <span>مصرف سوخت:</span>
-            <span className="font-bold text-emerald-600">{Number(vehicle.fuelConsumedLiters ?? 0).toFixed(2)} لیتر</span>
+            <span className="font-bold text-emerald-600">
+              {Number(vehicle.fuelConsumedLiters ?? 0).toFixed(2)} لیتر
+            </span>
           </div>
         </div>
       </Popup>

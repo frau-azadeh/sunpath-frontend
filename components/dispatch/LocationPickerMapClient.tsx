@@ -1,22 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { AlertCircle, Layers } from 'lucide-react';
 import {
   MapContainer,
-  TileLayer,
   Marker,
   Polyline,
-  useMapEvents,
+  TileLayer,
   useMap,
+  useMapEvents,
 } from 'react-leaflet';
-import L from 'leaflet';
-import { Layers, AlertCircle } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
 
 // تنظیم آیکون‌های استاندارد Leaflet در Next.js
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
+  ._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconRetinaUrl:
+    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
@@ -47,7 +50,11 @@ interface LocationPickerMapClientProps {
   neshanApiKey?: string;
 }
 
-function MapEvents({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
+function MapEvents({
+  onSelect,
+}: {
+  onSelect: (lat: number, lng: number) => void;
+}) {
   useMapEvents({
     click(e) {
       onSelect(e.latlng.lat, e.latlng.lng);
@@ -56,7 +63,13 @@ function MapEvents({ onSelect }: { onSelect: (lat: number, lng: number) => void 
   return null;
 }
 
-function MapBoundsSync({ origin, destination }: { origin: Coords | null; destination: Coords | null }) {
+function MapBoundsSync({
+  origin,
+  destination,
+}: {
+  origin: Coords | null;
+  destination: Coords | null;
+}) {
   const map = useMap();
   useEffect(() => {
     if (origin && destination) {
@@ -65,7 +78,7 @@ function MapBoundsSync({ origin, destination }: { origin: Coords | null; destina
           [origin.lat, origin.lng],
           [destination.lat, destination.lng],
         ],
-        { padding: [40, 40], maxZoom: 16 }
+        { padding: [40, 40], maxZoom: 16 },
       );
     } else if (origin) {
       map.setView([origin.lat, origin.lng], 14);
@@ -118,7 +131,8 @@ export default function LocationPickerMapClient({
           }`}
         />
         <span>
-          کلیک روی نقشه برای ثبت: <b>{activeMode === 'origin' ? 'مبدأ' : 'مقصد'}</b>
+          کلیک روی نقشه برای ثبت:{' '}
+          <b>{activeMode === 'origin' ? 'مبدأ' : 'مقصد'}</b>
         </span>
       </div>
 
@@ -127,8 +141,8 @@ export default function LocationPickerMapClient({
           origin
             ? [origin.lat, origin.lng]
             : destination
-            ? [destination.lat, destination.lng]
-            : defaultCenter
+              ? [destination.lat, destination.lng]
+              : defaultCenter
         }
         zoom={13}
         className="h-full w-full"
@@ -136,7 +150,7 @@ export default function LocationPickerMapClient({
       >
         {/* نقشه پایه روان و سبک CartoDB (سازگار با تم دارک و لایت بدون قطعی) */}
         <TileLayer
-          attribution='&copy; OpenStreetMap'
+          attribution="&copy; OpenStreetMap"
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           maxZoom={19}
         />
@@ -161,8 +175,15 @@ export default function LocationPickerMapClient({
         <MapEvents onSelect={onLocationSelect} />
         <MapBoundsSync origin={origin} destination={destination} />
 
-        {origin && <Marker position={[origin.lat, origin.lng]} icon={originPin} />}
-        {destination && <Marker position={[destination.lat, destination.lng]} icon={destinationPin} />}
+        {origin && (
+          <Marker position={[origin.lat, origin.lng]} icon={originPin} />
+        )}
+        {destination && (
+          <Marker
+            position={[destination.lat, destination.lng]}
+            icon={destinationPin}
+          />
+        )}
 
         {origin && destination && (
           <Polyline

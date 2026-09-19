@@ -1,9 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet';
+
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMapEvents,
+} from 'react-leaflet';
 
 interface Coords {
   lat: number;
@@ -16,7 +24,13 @@ interface AdminMapPickerProps {
   destination: Coords | null;
   onSelectOrigin: (coords: Coords) => void;
   onSelectDestination: (coords: Coords) => void;
-  activeDrivers?: Array<{ id: number; name: string; lat: number; lng: number; speed: number }>;
+  activeDrivers?: Array<{
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+    speed: number;
+  }>;
 }
 
 // کامپوننت دریافت رویداد کلیک برای انتخاب مبدأ و مقصد
@@ -42,7 +56,9 @@ export default function AdminMissionMapPicker({
   onSelectDestination,
   activeDrivers = [],
 }: AdminMapPickerProps) {
-  const [selectionMode, setSelectionMode] = useState<'origin' | 'destination'>('destination');
+  const [selectionMode, setSelectionMode] = useState<'origin' | 'destination'>(
+    'destination',
+  );
   const [showTraffic, setShowTraffic] = useState(true);
 
   // آیکون مبدأ (سبز)
@@ -83,16 +99,23 @@ export default function AdminMissionMapPicker({
 
   const handleMapClick = (lat: number, lng: number) => {
     if (selectionMode === 'origin') {
-      onSelectOrigin({ lat, lng, name: `مختصات: ${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+      onSelectOrigin({
+        lat,
+        lng,
+        name: `مختصات: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      });
       setSelectionMode('destination');
     } else {
-      onSelectDestination({ lat, lng, name: `مختصات مقصد: ${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+      onSelectDestination({
+        lat,
+        lng,
+        name: `مختصات مقصد: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      });
     }
   };
 
   return (
     <div className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
-      
       {/* دکمه‌های کنترل و انتخاب مود روی نقشه */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-wrap gap-2 bg-slate-900/90 backdrop-blur border border-slate-700/80 p-1.5 rounded-xl shadow-lg">
         <button
@@ -164,7 +187,10 @@ export default function AdminMissionMapPicker({
 
         {/* مارکر مقصد در صورت انتخاب */}
         {destination && (
-          <Marker position={[destination.lat, destination.lng]} icon={destinationIcon}>
+          <Marker
+            position={[destination.lat, destination.lng]}
+            icon={destinationIcon}
+          >
             <Popup>
               <div className="text-xs text-slate-800 font-sans p-1 text-right">
                 <strong>مقصد انتخابی:</strong> {destination.name}
@@ -180,7 +206,12 @@ export default function AdminMissionMapPicker({
               [origin.lat, origin.lng],
               [destination.lat, destination.lng],
             ]}
-            pathOptions={{ color: '#f59e0b', weight: 4, dashArray: '6, 8', opacity: 0.8 }}
+            pathOptions={{
+              color: '#f59e0b',
+              weight: 4,
+              dashArray: '6, 8',
+              opacity: 0.8,
+            }}
           />
         )}
 
@@ -190,7 +221,9 @@ export default function AdminMissionMapPicker({
             <Popup>
               <div className="text-xs text-slate-800 font-sans p-1 text-right">
                 <p className="font-bold">{d.name}</p>
-                <p className="text-[11px] text-slate-600">سرعت: {d.speed} km/h</p>
+                <p className="text-[11px] text-slate-600">
+                  سرعت: {d.speed} km/h
+                </p>
               </div>
             </Popup>
           </Marker>

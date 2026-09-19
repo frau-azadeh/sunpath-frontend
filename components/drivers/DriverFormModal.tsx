@@ -7,11 +7,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   BadgeCheck,
   IdCard,
+  KeyRound,
   Loader2,
   Phone,
   Save,
   User,
-  KeyRound,
   X,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -111,7 +111,13 @@ export const DriverFormModal = ({
   }, [initialData, isOpen, reset]);
 
   const handleFormSubmit = async (data: DriverFormValues) => {
-    if (!initialData && (!data.password || data.password.length < 6)) { setError('password', { type: 'manual', message: 'رمز عبور حداقل ۶ کاراکتر باشد.' }); return; }
+    if (!initialData && (!data.password || data.password.length < 6)) {
+      setError('password', {
+        type: 'manual',
+        message: 'رمز عبور حداقل ۶ کاراکتر باشد.',
+      });
+      return;
+    }
     const request: CreateDriverRequest = {
       firstName: data.firstName,
       lastName: data.lastName,
@@ -374,7 +380,12 @@ export const DriverFormModal = ({
               </FormField>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField id="username" label="نام کاربری" icon={<User size={15} />} error={errors.username?.message}>
+                <FormField
+                  id="username"
+                  label="نام کاربری"
+                  icon={<User size={15} />}
+                  error={errors.username?.message}
+                >
                   <input
                     id="username"
                     type="text"
@@ -386,13 +397,22 @@ export const DriverFormModal = ({
                   />
                 </FormField>
 
-                <FormField id="password" label={initialData ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور'} icon={<KeyRound size={15} />} error={errors.password?.message}>
+                <FormField
+                  id="password"
+                  label={initialData ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور'}
+                  icon={<KeyRound size={15} />}
+                  error={errors.password?.message}
+                >
                   <input
                     id="password"
                     type="password"
                     autoComplete={initialData ? 'new-password' : 'new-password'}
                     disabled={isSubmitting}
-                    placeholder={initialData ? 'در صورت تغییر وارد کنید' : 'حداقل ۶ کاراکتر'}
+                    placeholder={
+                      initialData
+                        ? 'در صورت تغییر وارد کنید'
+                        : 'حداقل ۶ کاراکتر'
+                    }
                     className={`${inputClassName} ${errors.password ? errorInputClassName : normalInputClassName}`}
                     {...register('password')}
                   />
