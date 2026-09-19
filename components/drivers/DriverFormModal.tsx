@@ -1,11 +1,13 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BadgeCheck,
+  Eye,
+  EyeOff,
   IdCard,
   KeyRound,
   Loader2,
@@ -21,12 +23,18 @@ import {
   type DriverFormValues,
   driverFormSchema,
 } from '@/app/schemas/driver.schema';
-import type { CreateDriverRequest, Driver } from '@/types/driver';
+import type {
+  CreateDriverRequest,
+  Driver,
+  UpdateDriverRequest,
+} from '@/types/driver';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateDriverRequest) => Promise<void>;
+  onSubmit: (
+    data: CreateDriverRequest | UpdateDriverRequest,
+  ) => Promise<void>;
   initialData?: Driver | null;
   isSubmitting: boolean;
 }
@@ -39,7 +47,9 @@ interface FormFieldProps {
   children: ReactNode;
 }
 
-const getDefaultValues = (initialData?: Driver | null): DriverFormInput => ({
+const getDefaultValues = (
+  initialData?: Driver | null,
+): DriverFormInput => ({
   firstName: initialData?.firstName ?? '',
   lastName: initialData?.lastName ?? '',
   nationalId: initialData?.nationalId ?? '',
@@ -80,6 +90,17 @@ const errorInputClassName = `
   dark:bg-red-950/10
 `;
 
+function normalizeDigits(value: string): string {
+  return value
+    .replace(/[۰-۹]/g, (digit) =>
+      String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)),
+    )
+    .replace(/[٠-٩]/g, (digit) =>
+      String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
+    )
+    .replace(/\D/g, '');
+}
+
 export const DriverFormModal = ({
   isOpen,
   onClose,
@@ -87,6 +108,10 @@ export const DriverFormModal = ({
   initialData,
   isSubmitting,
 }: Props) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isEditMode = initialData !== null && initialData !== undefined;
+
   const {
     register,
     handleSubmit,
@@ -96,46 +121,98 @@ export const DriverFormModal = ({
   } = useForm<DriverFormInput, unknown, DriverFormValues>({
     resolver: zodResolver(driverFormSchema),
     defaultValues: getDefaultValues(initialData),
-    mode: 'onBlur',
+    mode: 'onChange',
     reValidateMode: 'onChange',
   });
 
-  /**
-   * با بازشدن مودال یا تغییر راننده در حالت ویرایش،
-   * اطلاعات فرم مجدداً مقداردهی می‌شوند.
-   */
   useEffect(() => {
-    if (!isOpen) return;
-
-    reset(getDefaultValues(initialData));
-  }, [initialData, isOpen, reset]);
-
-  const handleFormSubmit = async (data: DriverFormValues) => {
-    if (!initialData && (!data.password || data.password.length < 6)) {
-      setError('password', {
-        type: 'manual',
-        message: 'رمز عبور حداقل ۶ کاراکتر باشد.',
-      });
+    if (!isOpen) {
       return;
     }
-    const request: CreateDriverRequest = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      nationalId: data.nationalId,
-      phone: data.phone,
-      licenseType: data.licenseType,
-      username: data.username,
-      password: data.password || '',
-    };
-
-    await onSubmit(request);
-  };
-
-  const handleClose = () => {
-    if (isSubmitting) return;
 
     reset(getDefaultValues(initialData));
+    setShowPassword(false);
+  }, [initialData, isOpen, reset]);
+
+  const handleClose = (): void => {
+    if (isSubmitting) {
+      return;
+    }
+
+    reset(getDefaultValues(initialData));
+    setShowPassword(false);
     onClose();
+  };
+
+  const handleFormSubmit = async (
+    data: DriverFormValues,
+  ): Promise<void> => {
+    const password = String(data.password ?? '').trim();
+
+    const commonData = {
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      nationalId: normalizeDigits(data.nationalId),
+      phone: normalizeDigits(data.phone),
+      licenseType: Number(data.licenseType),
+      username: data.username.trim(),
+    };
+
+    // =====================================================
+    // CREATE
+    // =====================================================
+
+    if (!isEditMode) {
+      if (password.length < 6) {
+        setError('password', {
+          type: 'manual',
+          message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
+        });
+
+        return;
+      }
+
+      const request: CreateDriverRequest = {
+        ...commonData,
+        password,
+      };
+
+      await onSubmit(request);
+
+      return;
+    }
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    if (!initialData) {
+      return;
+    }
+
+    if (password.length > 0 && password.length < 6) {
+      setError('password', {
+        type: 'manual',
+        message: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.',
+      });
+
+      return;
+    }
+
+    const request: UpdateDriverRequest = {
+      id: initialData.id,
+      ...commonData,
+    };
+
+    /*
+     * اگر کاربر رمز جدید وارد نکرده باشد،
+     * password اصلاً داخل JSON قرار نمی‌گیرد.
+     */
+    if (password.length >= 6) {
+      request.password = password;
+    }
+
+    await onSubmit(request);
   };
 
   return (
@@ -145,18 +222,17 @@ export const DriverFormModal = ({
           dir="rtl"
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
         >
-          {/* Backdrop */}
           <motion.button
             type="button"
-            aria-label="بستن پنجره ثبت راننده"
+            aria-label="بستن پنجره راننده"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
+            disabled={isSubmitting}
             className="absolute inset-0 cursor-default bg-neutral-950/50 backdrop-blur-sm"
           />
 
-          {/* Modal */}
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -181,16 +257,15 @@ export const DriverFormModal = ({
               ease: 'easeOut',
             }}
             className="
-              relative w-full max-w-lg overflow-hidden
-              rounded-[32px] border border-orange-100
-              bg-white shadow-2xl shadow-orange-950/10
+              relative max-h-[calc(100vh-2rem)] w-full max-w-lg
+              overflow-y-auto rounded-[32px]
+              border border-orange-100 bg-white
+              shadow-2xl shadow-orange-950/10
               dark:border-orange-950/60 dark:bg-neutral-900
             "
           >
-            {/* Orange accent */}
             <div className="h-1.5 w-full bg-orange-500" />
 
-            {/* Header */}
             <div
               className="
                 flex items-center justify-between
@@ -213,13 +288,17 @@ export const DriverFormModal = ({
                 <div className="min-w-0">
                   <h2
                     id="driver-form-title"
-                    className="truncate text-xl  text-neutral-900 dark:text-white"
+                    className="truncate text-xl font-bold text-neutral-900 dark:text-white"
                   >
-                    {initialData ? 'ویرایش اطلاعات راننده' : 'ثبت راننده جدید'}
+                    {isEditMode
+                      ? 'ویرایش اطلاعات راننده'
+                      : 'ثبت راننده جدید'}
                   </h2>
 
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    اطلاعات راننده را با دقت تکمیل کنید
+                    {isEditMode
+                      ? 'اطلاعات مورد نظر را ویرایش و ذخیره کنید.'
+                      : 'اطلاعات راننده را با دقت تکمیل کنید.'}
                   </p>
                 </div>
               </div>
@@ -241,7 +320,6 @@ export const DriverFormModal = ({
               </button>
             </div>
 
-            {/* Form */}
             <form
               noValidate
               onSubmit={handleSubmit(handleFormSubmit)}
@@ -262,7 +340,9 @@ export const DriverFormModal = ({
                     placeholder="مثلاً: علی"
                     aria-invalid={Boolean(errors.firstName)}
                     aria-describedby={
-                      errors.firstName ? 'firstName-error' : undefined
+                      errors.firstName
+                        ? 'firstName-error'
+                        : undefined
                     }
                     className={`${inputClassName} ${
                       errors.firstName
@@ -287,7 +367,9 @@ export const DriverFormModal = ({
                     placeholder="مثلاً: محمدی"
                     aria-invalid={Boolean(errors.lastName)}
                     aria-describedby={
-                      errors.lastName ? 'lastName-error' : undefined
+                      errors.lastName
+                        ? 'lastName-error'
+                        : undefined
                     }
                     className={`${inputClassName} ${
                       errors.lastName
@@ -316,9 +398,11 @@ export const DriverFormModal = ({
                   placeholder="0012345678"
                   aria-invalid={Boolean(errors.nationalId)}
                   aria-describedby={
-                    errors.nationalId ? 'nationalId-error' : undefined
+                    errors.nationalId
+                      ? 'nationalId-error'
+                      : undefined
                   }
-                  className={`${inputClassName} text-left ${
+                  className={`${inputClassName} text-left tabular-nums ${
                     errors.nationalId
                       ? errorInputClassName
                       : normalInputClassName
@@ -336,16 +420,20 @@ export const DriverFormModal = ({
                 <input
                   id="phone"
                   type="tel"
-                  inputMode="tel"
+                  inputMode="numeric"
                   autoComplete="tel"
                   maxLength={11}
                   dir="ltr"
                   disabled={isSubmitting}
                   placeholder="09121234567"
                   aria-invalid={Boolean(errors.phone)}
-                  aria-describedby={errors.phone ? 'phone-error' : undefined}
-                  className={`${inputClassName} text-left ${
-                    errors.phone ? errorInputClassName : normalInputClassName
+                  aria-describedby={
+                    errors.phone ? 'phone-error' : undefined
+                  }
+                  className={`${inputClassName} text-left tabular-nums ${
+                    errors.phone
+                      ? errorInputClassName
+                      : normalInputClassName
                   }`}
                   {...register('phone')}
                 />
@@ -362,7 +450,9 @@ export const DriverFormModal = ({
                   disabled={isSubmitting}
                   aria-invalid={Boolean(errors.licenseType)}
                   aria-describedby={
-                    errors.licenseType ? 'licenseType-error' : undefined
+                    errors.licenseType
+                      ? 'licenseType-error'
+                      : undefined
                   }
                   className={`${inputClassName} cursor-pointer ${
                     errors.licenseType
@@ -392,34 +482,94 @@ export const DriverFormModal = ({
                     autoComplete="username"
                     disabled={isSubmitting}
                     placeholder="مثلاً: ali.driver"
-                    className={`${inputClassName} ${errors.username ? errorInputClassName : normalInputClassName}`}
+                    aria-invalid={Boolean(errors.username)}
+                    aria-describedby={
+                      errors.username
+                        ? 'username-error'
+                        : undefined
+                    }
+                    className={`${inputClassName} ${
+                      errors.username
+                        ? errorInputClassName
+                        : normalInputClassName
+                    }`}
                     {...register('username')}
                   />
                 </FormField>
 
                 <FormField
                   id="password"
-                  label={initialData ? 'رمز عبور جدید (اختیاری)' : 'رمز عبور'}
+                  label={
+                    isEditMode
+                      ? 'رمز عبور جدید (اختیاری)'
+                      : 'رمز عبور'
+                  }
                   icon={<KeyRound size={15} />}
                   error={errors.password?.message}
                 >
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete={initialData ? 'new-password' : 'new-password'}
-                    disabled={isSubmitting}
-                    placeholder={
-                      initialData
-                        ? 'در صورت تغییر وارد کنید'
-                        : 'حداقل ۶ کاراکتر'
-                    }
-                    className={`${inputClassName} ${errors.password ? errorInputClassName : normalInputClassName}`}
-                    {...register('password')}
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      disabled={isSubmitting}
+                      placeholder={
+                        isEditMode
+                          ? 'برای عدم تغییر، خالی بگذارید'
+                          : 'حداقل ۶ کاراکتر'
+                      }
+                      aria-invalid={Boolean(errors.password)}
+                      aria-describedby={
+                        errors.password
+                          ? 'password-error'
+                          : undefined
+                      }
+                      className={`${inputClassName} pl-11 ${
+                        errors.password
+                          ? errorInputClassName
+                          : normalInputClassName
+                      }`}
+                      {...register('password')}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword((current) => !current)
+                      }
+                      disabled={isSubmitting}
+                      aria-label={
+                        showPassword
+                          ? 'مخفی کردن رمز عبور'
+                          : 'نمایش رمز عبور'
+                      }
+                      className="
+                        absolute left-3 top-1/2 flex h-8 w-8
+                        -translate-y-1/2 items-center justify-center
+                        rounded-lg text-neutral-400
+                        transition-colors
+                        hover:bg-orange-100 hover:text-orange-600
+                        disabled:cursor-not-allowed disabled:opacity-50
+                        dark:hover:bg-orange-950/40
+                      "
+                    >
+                      {showPassword ? (
+                        <EyeOff size={17} />
+                      ) : (
+                        <Eye size={17} />
+                      )}
+                    </button>
+                  </div>
+
+                  {isEditMode && !errors.password && (
+                    <p className="mt-1 text-[11px] leading-5 text-neutral-400 dark:text-neutral-500">
+                      اگر قصد تغییر رمز عبور را ندارید، این قسمت
+                      را خالی بگذارید.
+                    </p>
+                  )}
                 </FormField>
               </div>
 
-              {/* Actions */}
               <div
                 className="
                   flex flex-col-reverse gap-3
@@ -477,7 +627,7 @@ export const DriverFormModal = ({
                   <span>
                     {isSubmitting
                       ? 'در حال ذخیره...'
-                      : initialData
+                      : isEditMode
                         ? 'ذخیره تغییرات'
                         : 'ثبت اطلاعات'}
                   </span>
@@ -491,7 +641,13 @@ export const DriverFormModal = ({
   );
 };
 
-const FormField = ({ id, label, error, icon, children }: FormFieldProps) => (
+const FormField = ({
+  id,
+  label,
+  error,
+  icon,
+  children,
+}: FormFieldProps) => (
   <div className="space-y-1.5">
     <label
       htmlFor={id}
