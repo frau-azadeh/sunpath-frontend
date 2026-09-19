@@ -25,6 +25,9 @@ export interface Vehicle {
   lastLongitude?: number | null;
   lastUpdateAt?: string | null;
   currentDriverName?: string | null;
+  activeDispatchId?: number | null;
+  activeDispatchDriverId?: number | null;
+  dispatchStatus?: string | null;
   originLat?: number | null;
   originLng?: number | null;
   originAddress?: string | null;
