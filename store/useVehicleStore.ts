@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Vehicle } from '@/types/fleet';
+import type { Vehicle } from '@/types/vehicle';
 
 declare global {
   interface Window {
@@ -46,17 +46,24 @@ function getApiBaseUrl(): string {
   return '';
 }
 
-function normalizeList(data: any): any[] {
+function normalizeList(data: unknown): unknown[] {
   if (Array.isArray(data)) {
     return data;
   }
 
-  if (Array.isArray(data?.items)) {
-    return data.items;
-  }
+  if (typeof data === 'object' && data !== null) {
+    const objectData = data as {
+      items?: unknown;
+      data?: unknown;
+    };
 
-  if (Array.isArray(data?.data)) {
-    return data.data;
+    if (Array.isArray(objectData.items)) {
+      return objectData.items;
+    }
+
+    if (Array.isArray(objectData.data)) {
+      return objectData.data;
+    }
   }
 
   return [];
@@ -91,45 +98,77 @@ export const useVehicleStore = create<VehicleState>((set) => ({
         throw new Error(`GET /api/Vehicles failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
 
       const list = normalizeList(data);
 
-      const normalized: Vehicle[] = list.map((vehicle: any) => {
-        const id = vehicle.id ?? vehicle.vehicleId;
+      const normalized: Vehicle[] = list.map((item) => {
+        const vehicle = item as Partial<Vehicle> & {
+          vehicleId?: number;
+          lat?: number;
+          lng?: number;
+        };
 
-        const latitude = Number(
-          vehicle.latitude ?? vehicle.lastLatitude ?? vehicle.lat ?? 0,
-        );
+        const id = vehicle.id ?? vehicle.vehicleId ?? 0;
 
-        const longitude = Number(
-          vehicle.longitude ?? vehicle.lastLongitude ?? vehicle.lng ?? 0,
-        );
+        const latitudeValue =
+          vehicle.latitude ?? vehicle.lastLatitude ?? vehicle.lat ?? null;
+
+        const longitudeValue =
+          vehicle.longitude ?? vehicle.lastLongitude ?? vehicle.lng ?? null;
+
+        const latitude = latitudeValue == null ? null : Number(latitudeValue);
+
+        const longitude =
+          longitudeValue == null ? null : Number(longitudeValue);
 
         return {
-          ...vehicle,
+          id: Number(id),
 
-          id,
+          plateNumber: vehicle.plateNumber ?? `خودرو ${id}`,
 
-          latitude,
+          model: vehicle.model ?? null,
 
-          longitude,
+          status: Number(vehicle.status ?? 0) === 1 ? 1 : 0,
 
-          lastLatitude: Number(vehicle.lastLatitude ?? latitude),
+          lastLatitude:
+            vehicle.lastLatitude == null
+              ? latitude
+              : Number(vehicle.lastLatitude),
 
-          lastLongitude: Number(vehicle.lastLongitude ?? longitude),
+          lastLongitude:
+            vehicle.lastLongitude == null
+              ? longitude
+              : Number(vehicle.lastLongitude),
+
+          lastUpdateAt: vehicle.lastUpdateAt ?? null,
 
           speed: Number(vehicle.speed ?? 0),
 
           heading: Number(vehicle.heading ?? 0),
 
-          plateNumber: vehicle.plateNumber ?? `خودرو ${id}`,
+          latitude,
+
+          longitude,
+
+          lastUpdate: vehicle.lastUpdate ?? null,
+
+          vehicleType: Number(
+            vehicle.vehicleType ?? 0,
+          ) as Vehicle['vehicleType'],
+
+          insuranceNumber: vehicle.insuranceNumber ?? null,
+
+          insuranceExpiryDate: vehicle.insuranceExpiryDate ?? null,
+
+          currentDriverId: vehicle.currentDriverId ?? null,
+
+          currentDriverName: vehicle.currentDriverName ?? null,
         };
       });
 
       set({
         vehicles: normalized,
-
         isLoading: false,
       });
     } catch (error) {
@@ -180,8 +219,14 @@ export const useVehicleStore = create<VehicleState>((set) => ({
       );
 
       if (index === -1) {
+        /*
+         * برای اضافه شدن یک خودرو به Store
+         * باید payload کامل Vehicle باشد.
+         */
+        const newVehicle = payload as Vehicle;
+
         return {
-          vehicles: [...state.vehicles, payload as Vehicle],
+          vehicles: [...state.vehicles, newVehicle],
         };
       }
 
@@ -190,6 +235,7 @@ export const useVehicleStore = create<VehicleState>((set) => ({
       vehicles[index] = {
         ...vehicles[index],
         ...payload,
+        id: Number(payload.id),
       };
 
       return {
