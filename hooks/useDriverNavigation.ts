@@ -5,18 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { dispatchService } from '@/services/dispatchService';
 import type { Dispatch } from '@/types/dispatch';
 
-declare global {
-  interface Window {
-    CONFIG?: {
-      NEXT_PUBLIC_API_BASE?: string;
-    };
-  }
-}
-
-/* =========================================================
-   Types
-========================================================= */
-
 export interface RouteCoord {
   lat: number;
   lng: number;
@@ -36,35 +24,31 @@ export interface ActiveMission {
   status: 'assigned' | 'in_progress' | 'completed';
 
   vehicleId: number;
+
   driverId: number | null;
 }
 
 export interface LiveTripStats {
   currentSpeed: number;
+
   heading: number;
 
   totalDistanceKm: number;
 
   durationSeconds: number;
+
   stopDurationSeconds: number;
 
   fuelConsumedLiters: number;
+
   efficiencyScore: number;
 }
 
-/* =========================================================
-   Constants
-========================================================= */
-
-const MIN_MOVEMENT_KM = 0.005; // حدود 5 متر
+const MIN_MOVEMENT_KM = 0.005;
 const MAX_MOVEMENT_KM = 2;
 
 const DEFAULT_FUEL_PER_100KM = 8.5;
 const IDLE_FUEL_PER_HOUR = 1.1;
-
-/* =========================================================
-   Helpers
-========================================================= */
 
 const isValidCoordinate = (lat: number, lng: number): boolean => {
   return (
@@ -78,11 +62,8 @@ const isValidCoordinate = (lat: number, lng: number): boolean => {
   );
 };
 
-/**
- * فاصله دو نقطه GPS با فرمول Haversine
- */
 const distanceKm = (a: RouteCoord, b: RouteCoord): number => {
-  const R = 6371;
+  const radius = 6371;
 
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
 
@@ -96,35 +77,32 @@ const distanceKm = (a: RouteCoord, b: RouteCoord): number => {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
 
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return radius * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 };
 
-/**
- * Dispatch -> ActiveMission
- */
-export const toMission = (d: Dispatch | null): ActiveMission | null => {
-  if (!d) {
+export const toMission = (dispatch: Dispatch | null): ActiveMission | null => {
+  if (!dispatch) {
     return null;
   }
 
   if (
-    d.id == null ||
-    d.vehicleId == null ||
-    d.originLatitude == null ||
-    d.originLongitude == null ||
-    d.destinationLatitude == null ||
-    d.destinationLongitude == null
+    dispatch.id == null ||
+    dispatch.vehicleId == null ||
+    dispatch.originLatitude == null ||
+    dispatch.originLongitude == null ||
+    dispatch.destinationLatitude == null ||
+    dispatch.destinationLongitude == null
   ) {
     return null;
   }
 
-  const originLat = Number(d.originLatitude);
+  const originLat = Number(dispatch.originLatitude);
 
-  const originLng = Number(d.originLongitude);
+  const originLng = Number(dispatch.originLongitude);
 
-  const destinationLat = Number(d.destinationLatitude);
+  const destinationLat = Number(dispatch.destinationLatitude);
 
-  const destinationLng = Number(d.destinationLongitude);
+  const destinationLng = Number(dispatch.destinationLongitude);
 
   if (
     !isValidCoordinate(originLat, originLng) ||
@@ -133,7 +111,7 @@ export const toMission = (d: Dispatch | null): ActiveMission | null => {
     return null;
   }
 
-  const rawStatus = String(d.status ?? '').toLowerCase();
+  const rawStatus = String(dispatch.status ?? '').toLowerCase();
 
   let status: ActiveMission['status'] = 'assigned';
 
@@ -153,18 +131,18 @@ export const toMission = (d: Dispatch | null): ActiveMission | null => {
   }
 
   return {
-    id: Number(d.id),
+    id: Number(dispatch.id),
 
-    vehicleId: Number(d.vehicleId),
+    vehicleId: Number(dispatch.vehicleId),
 
-    driverId: d.driverId != null ? Number(d.driverId) : null,
+    driverId: dispatch.driverId != null ? Number(dispatch.driverId) : null,
 
-    originName: d.originTitle || 'مبدأ مأموریت',
+    originName: dispatch.originTitle || 'مبدأ مأموریت',
 
     originLat,
     originLng,
 
-    destinationName: d.destinationTitle || 'مقصد مأموریت',
+    destinationName: dispatch.destinationTitle || 'مقصد مأموریت',
 
     destinationLat,
     destinationLng,
@@ -173,18 +151,10 @@ export const toMission = (d: Dispatch | null): ActiveMission | null => {
   };
 };
 
-/* =========================================================
-   Hook
-========================================================= */
-
 export function useDriverNavigation(
   mission: ActiveMission | null,
   driverId: number,
 ) {
-  /* ---------------------------------------------------------
-     State
-  --------------------------------------------------------- */
-
   const [currentLocation, setCurrentLocation] = useState<RouteCoord | null>(
     null,
   );
@@ -198,23 +168,21 @@ export function useDriverNavigation(
   const [stats, setStats] = useState<LiveTripStats>({
     currentSpeed: 0,
     heading: 0,
-
     totalDistanceKm: 0,
-
     durationSeconds: 0,
     stopDurationSeconds: 0,
-
     fuelConsumedLiters: 0,
-
     efficiencyScore: 100,
   });
 
-  /* ---------------------------------------------------------
-     Refs
-  --------------------------------------------------------- */
-
   const watchId = useRef<number | null>(null);
 
+  /*
+   * فقط آخرین نقطه واقعی GPS.
+   *
+   * مبدأ مأموریت نباید baseline محاسبه
+   * مسافت واقعی باشد.
+   */
   const lastPoint = useRef<RouteCoord | null>(null);
 
   const startedAt = useRef<number | null>(null);
@@ -225,16 +193,8 @@ export function useDriverNavigation(
 
   const lastHeading = useRef(0);
 
-  /*
-   * برای جلوگیری از ارسال همزمان چند درخواست GPS
-   */
   const sendingRef = useRef(false);
 
-  /*
-   * آخرین GPS دریافت‌شده.
-   * اگر هنگام ارسال قبلی GPS جدید برسد،
-   * بعد از پایان درخواست ارسال خواهد شد.
-   */
   const pendingLocationRef = useRef<{
     lat: number;
     lng: number;
@@ -243,63 +203,64 @@ export function useDriverNavigation(
     accuracy: number | null;
   } | null>(null);
 
-  /* =========================================================
-     Reset when mission changes
-  ========================================================= */
-
+  /*
+   * Reset هنگام تغییر مأموریت.
+   */
   useEffect(() => {
     if (!mission) {
       setCurrentLocation(null);
-
       setRouteCoordinates([]);
-
       setIsDriving(false);
 
       lastPoint.current = null;
+      startedAt.current = null;
+      lastTelemetryAt.current = null;
+      stopSeconds.current = 0;
+      lastHeading.current = 0;
+
+      setStats({
+        currentSpeed: 0,
+        heading: 0,
+        totalDistanceKm: 0,
+        durationSeconds: 0,
+        stopDurationSeconds: 0,
+        fuelConsumedLiters: 0,
+        efficiencyScore: 100,
+      });
 
       return;
     }
 
-    const origin = {
+    /*
+     * برای نمایش اولیه، نقشه را روی مبدأ می‌بریم.
+     * ولی lastPoint همچنان null می‌ماند.
+     */
+    setCurrentLocation({
       lat: mission.originLat,
       lng: mission.originLng,
-    };
+    });
 
-    setCurrentLocation(origin);
-
-    lastPoint.current = origin;
-
+    lastPoint.current = null;
     lastHeading.current = 0;
-
     stopSeconds.current = 0;
-
     startedAt.current = null;
-
     lastTelemetryAt.current = null;
 
     setStats({
       currentSpeed: 0,
       heading: 0,
-
       totalDistanceKm: 0,
-
       durationSeconds: 0,
       stopDurationSeconds: 0,
-
       fuelConsumedLiters: 0,
-
       efficiencyScore: 100,
     });
 
-    /*
-     * اگر مأموریت قبلاً Started شده باشد،
-     * GPS Tracking را فعال کن.
-     */
     setIsDriving(mission.status === 'in_progress');
-  }, [mission?.id]);
+  }, [mission?.id, mission?.originLat, mission?.originLng]);
 
   /*
-   * اگر status همان مأموریت تغییر کرد
+   * هماهنگ‌سازی وضعیت مأموریت با tracking.
    */
   useEffect(() => {
     if (!mission) {
@@ -315,23 +276,18 @@ export function useDriverNavigation(
     }
   }, [mission?.id, mission?.status]);
 
-  /* =========================================================
-     Get road route from OSRM
-
-     این مسیر فقط برای نمایش مسیر برنامه‌ریزی‌شده است.
-     GPS واقعی خودرو جداگانه به Backend ارسال می‌شود.
-  ========================================================= */
-
+  /*
+   * دریافت مسیر برنامه‌ریزی‌شده از OSRM.
+   */
   useEffect(() => {
     if (!mission) {
       setRouteCoordinates([]);
-
       return;
     }
 
     let cancelled = false;
 
-    const fetchRoute = async () => {
+    const fetchRoute = async (): Promise<void> => {
       try {
         const url =
           `https://router.project-osrm.org/route/v1/driving/` +
@@ -355,16 +311,20 @@ export function useDriverNavigation(
 
         if (Array.isArray(coordinates) && coordinates.length > 0) {
           const route: RouteCoord[] = coordinates
-            .map((c: [number, number]) => ({
-              lat: Number(c[1]),
+            .map((coordinate: [number, number]) => ({
+              lat: Number(coordinate[1]),
 
-              lng: Number(c[0]),
+              lng: Number(coordinate[0]),
             }))
-            .filter((p: RouteCoord) => isValidCoordinate(p.lat, p.lng));
+            .filter((point: RouteCoord) =>
+              isValidCoordinate(point.lat, point.lng),
+            );
 
-          setRouteCoordinates(route);
+          if (route.length > 0) {
+            setRouteCoordinates(route);
 
-          return;
+            return;
+          }
         }
 
         throw new Error('No route returned');
@@ -376,8 +336,8 @@ export function useDriverNavigation(
         }
 
         /*
-         * fallback:
-         * خط مستقیم مبدأ -> مقصد
+         * اگر OSRM در دسترس نبود،
+         * حداقل خط مستقیم مبدأ تا مقصد.
          */
         setRouteCoordinates([
           {
@@ -408,10 +368,6 @@ export function useDriverNavigation(
     mission?.destinationLng,
   ]);
 
-  /* =========================================================
-     Send GPS to Backend
-  ========================================================= */
-
   const sendLocation = useCallback(
     async (
       lat: number,
@@ -419,7 +375,7 @@ export function useDriverNavigation(
       speed: number,
       heading: number,
       accuracy: number | null,
-    ) => {
+    ): Promise<void> => {
       if (!mission) {
         return;
       }
@@ -433,19 +389,14 @@ export function useDriverNavigation(
         return;
       }
 
-      /*
-       * UI خودرو راننده فوراً
-       * آپدیت شود.
-       */
       setCurrentLocation({
         lat,
         lng,
       });
 
       /*
-       * اگر درخواست قبلی هنوز
-       * در حال ارسال است،
-       * جدیدترین GPS را نگه می‌داریم.
+       * اگر درخواست قبلی هنوز در حال ارسال است،
+       * فقط جدیدترین نقطه را نگه می‌داریم.
        */
       if (sendingRef.current) {
         pendingLocationRef.current = {
@@ -473,46 +424,43 @@ export function useDriverNavigation(
 
         let addedDistance = 0;
 
+        /*
+         * GPS اول فقط baseline است.
+         */
         if (previous) {
           addedDistance = distanceKm(previous, currentPoint);
         }
 
-        /*
-         * نویز GPS را وارد مسافت نکن.
-         */
         const validMovement =
-          addedDistance >= MIN_MOVEMENT_KM && addedDistance < MAX_MOVEMENT_KM;
+          previous !== null &&
+          addedDistance >= MIN_MOVEMENT_KM &&
+          addedDistance <= MAX_MOVEMENT_KM;
 
-        if (validMovement) {
-          lastPoint.current = currentPoint;
-        } else if (!previous) {
-          lastPoint.current = currentPoint;
-        }
+        /*
+         * حتی اگر نقطه نسبت به قبلی پرش بزرگی داشت،
+         * آن را baseline بعدی می‌کنیم تا سیستم روی
+         * نقطه قدیمی گیر نکند.
+         */
+        lastPoint.current = currentPoint;
 
         const previousTime = lastTelemetryAt.current;
 
         const elapsed = previousTime
-          ? Math.max(0, (now - previousTime) / 1000)
+          ? Math.max(0, Math.min(120, (now - previousTime) / 1000))
           : 0;
 
         lastTelemetryAt.current = now;
 
-        /*
-         * اگر browser سرعت GPS داد
-         * از همان استفاده می‌کنیم.
-         *
-         * در غیر این صورت از فاصله /
-         * زمان محاسبه می‌شود.
-         */
         let effectiveSpeed = Number.isFinite(speed) && speed >= 0 ? speed : 0;
 
+        /*
+         * اگر مرورگر speed نداد ولی حرکت واقعی داشتیم،
+         * سرعت را از فاصله و زمان تخمین می‌زنیم.
+         */
         if (effectiveSpeed <= 0 && elapsed > 0 && validMovement) {
           effectiveSpeed = addedDistance / (elapsed / 3600);
         }
 
-        /*
-         * heading
-         */
         let effectiveHeading =
           Number.isFinite(heading) && heading >= 0
             ? heading
@@ -522,13 +470,9 @@ export function useDriverNavigation(
 
         lastHeading.current = effectiveHeading;
 
-        /* -----------------------------------------
-             Statistics
-          ----------------------------------------- */
-
-        setStats((prev) => {
+        setStats((previousStats) => {
           const totalDistance =
-            prev.totalDistanceKm + (validMovement ? addedDistance : 0);
+            previousStats.totalDistanceKm + (validMovement ? addedDistance : 0);
 
           const stopped = effectiveSpeed < 3;
 
@@ -538,7 +482,7 @@ export function useDriverNavigation(
 
           const duration = startedAt.current
             ? Math.max(0, Math.round((now - startedAt.current) / 1000))
-            : prev.durationSeconds;
+            : previousStats.durationSeconds;
 
           const fuel =
             (totalDistance / 100) * DEFAULT_FUEL_PER_100KM +
@@ -568,14 +512,10 @@ export function useDriverNavigation(
           };
         });
 
-        /* -----------------------------------------
-             Send GPS to backend
-
-             Backend باید بعد از دریافت این درخواست
-             VehicleLocationUpdated را از SignalR
-             broadcast کند.
-          ----------------------------------------- */
-
+        /*
+         * این اطلاعات دقیقاً برای ذخیره History
+         * راننده/مأموریت به Backend ارسال می‌شود.
+         */
         await dispatchService.updateVehicleLocation({
           vehicleId: mission.vehicleId,
 
@@ -600,19 +540,10 @@ export function useDriverNavigation(
       } catch (error) {
         console.warn('GPS telemetry API error:', error);
 
-        /*
-         * GPS خود مرورگر ممکن است سالم باشد،
-         * ولی API ارسال telemetry خطا داده باشد.
-         */
         setGpsError('موقعیت دریافت شد اما ارسال آن به سرور ناموفق بود.');
       } finally {
         sendingRef.current = false;
 
-        /*
-         * اگر هنگام ارسال،
-         * GPS جدید رسیده بود،
-         * جدیدترین نقطه را ارسال کن.
-         */
         const pending = pendingLocationRef.current;
 
         pendingLocationRef.current = null;
@@ -631,10 +562,9 @@ export function useDriverNavigation(
     [driverId, mission],
   );
 
-  /* =========================================================
-     Browser GPS Watch
-  ========================================================= */
-
+  /*
+   * GPS Watch.
+   */
   useEffect(() => {
     if (!isDriving || !mission) {
       return;
@@ -654,11 +584,7 @@ export function useDriverNavigation(
       startedAt.current = Date.now();
     }
 
-    lastTelemetryAt.current = Date.now();
-
-    /* -----------------------------------------
-       GPS Success
-    ----------------------------------------- */
+    lastTelemetryAt.current = null;
 
     const success = (position: GeolocationPosition) => {
       const lat = position.coords.latitude;
@@ -670,8 +596,8 @@ export function useDriverNavigation(
       }
 
       /*
-       * coords.speed = meter / second
-       * تبدیل به km/h
+       * Geolocation API سرعت را m/s می‌دهد.
+       * Backend ما km/h انتظار دارد.
        */
       const speed =
         position.coords.speed != null && position.coords.speed >= 0
@@ -689,12 +615,8 @@ export function useDriverNavigation(
       void sendLocation(lat, lng, speed, heading, accuracy);
     };
 
-    /* -----------------------------------------
-       GPS Error
-    ----------------------------------------- */
-
-    const error = (e: GeolocationPositionError) => {
-      switch (e.code) {
+    const error = (gpsPositionError: GeolocationPositionError) => {
+      switch (gpsPositionError.code) {
         case 1:
           setGpsError('دسترسی به موقعیت مکانی رد شده است.');
           break;
@@ -712,21 +634,11 @@ export function useDriverNavigation(
       }
     };
 
-    /* -----------------------------------------
-       Start GPS
-    ----------------------------------------- */
-
     watchId.current = navigator.geolocation.watchPosition(success, error, {
       enableHighAccuracy: true,
-
       maximumAge: 2000,
-
       timeout: 15000,
     });
-
-    /* -----------------------------------------
-       Cleanup
-    ----------------------------------------- */
 
     return () => {
       if (watchId.current !== null) {
@@ -736,10 +648,6 @@ export function useDriverNavigation(
       watchId.current = null;
     };
   }, [isDriving, mission?.id, sendLocation]);
-
-  /* =========================================================
-     Start tracking
-  ========================================================= */
 
   const startTracking = useCallback(() => {
     if (!mission) {
@@ -752,30 +660,34 @@ export function useDriverNavigation(
 
     startedAt.current = Date.now();
 
-    lastTelemetryAt.current = Date.now();
-
     /*
-     * مبدأ نقطه اولیه مسیر است.
+     * اولین GPS baseline است.
      */
-    lastPoint.current = {
-      lat: mission.originLat,
+    lastPoint.current = null;
 
-      lng: mission.originLng,
-    };
+    lastTelemetryAt.current = null;
+
+    pendingLocationRef.current = null;
 
     setGpsError(null);
+
+    setStats({
+      currentSpeed: 0,
+      heading: 0,
+      totalDistanceKm: 0,
+      durationSeconds: 0,
+      stopDurationSeconds: 0,
+      fuelConsumedLiters: 0,
+      efficiencyScore: 100,
+    });
 
     setIsDriving(true);
   }, [mission]);
 
-  /* =========================================================
-     Stop tracking
-  ========================================================= */
-
   const stopTracking = useCallback(() => {
     setIsDriving(false);
 
-    if (watchId.current !== null) {
+    if (typeof navigator !== 'undefined' && watchId.current !== null) {
       navigator.geolocation.clearWatch(watchId.current);
     }
 
@@ -783,31 +695,22 @@ export function useDriverNavigation(
 
     lastTelemetryAt.current = null;
 
-    setStats((prev) => ({
-      ...prev,
+    pendingLocationRef.current = null;
+
+    setStats((previous) => ({
+      ...previous,
       currentSpeed: 0,
     }));
   }, []);
 
-  /* =========================================================
-     Return
-  ========================================================= */
-
   return {
     currentLocation,
-
     routeCoordinates,
-
     stats,
-
     isDriving,
-
     setIsDriving,
-
     startTracking,
-
     stopTracking,
-
     gpsError,
   };
 }

@@ -88,6 +88,12 @@ function getErrorMessage(error: unknown): string {
   return message;
 }
 
+function isUpdateDriverRequest(
+  data: CreateDriverRequest | UpdateDriverRequest,
+): data is UpdateDriverRequest {
+  return 'id' in data;
+}
+
 export default function VehiclesPageClient({
   initialDrivers,
   initialDriversError,
@@ -383,27 +389,70 @@ export default function VehiclesPageClient({
   };
 
   const handleDriverSubmit = async (
-    data: CreateDriverRequest,
+    data: CreateDriverRequest | UpdateDriverRequest,
   ): Promise<void> => {
     setIsSubmittingDriver(true);
     setDriverError(null);
 
     try {
       if (selectedDriver) {
+        /*
+         * در حالت ویرایش باید UpdateDriverRequest
+         * دریافت کرده باشیم.
+         */
+        if (!isUpdateDriverRequest(data)) {
+          throw new Error('اطلاعات ویرایش راننده معتبر نیست.');
+        }
+
         const updateRequest: UpdateDriverRequest = {
           id: selectedDriver.id,
-          ...data,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          nationalId: data.nationalId,
+          phone: data.phone,
+          licenseType: data.licenseType,
+          username: data.username,
         };
+
+        /*
+         * password فقط زمانی ارسال می‌شود که
+         * واقعاً مقدار داشته باشد.
+         */
+        if (
+          typeof data.password === 'string' &&
+          data.password.trim().length > 0
+        ) {
+          updateRequest.password = data.password.trim();
+        }
 
         await driverService.update(selectedDriver.id, updateRequest);
       } else {
-        await driverService.create(data);
+        /*
+         * در حالت ثبت نباید UpdateDriverRequest
+         * دریافت شده باشد.
+         */
+        if (isUpdateDriverRequest(data)) {
+          throw new Error('اطلاعات ثبت راننده معتبر نیست.');
+        }
+
+        const createRequest: CreateDriverRequest = {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          nationalId: data.nationalId,
+          phone: data.phone,
+          licenseType: data.licenseType,
+          username: data.username,
+          password: data.password,
+        };
+
+        await driverService.create(createRequest);
       }
 
       await loadDrivers(true);
 
       setIsDriverModalOpen(false);
       setSelectedDriver(null);
+      setDriverError(null);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
 
@@ -495,8 +544,6 @@ export default function VehiclesPageClient({
   const handleDeleteDispatch = async (dispatch: Dispatch): Promise<void> => {
     try {
       await dispatchService.remove(dispatch.id);
-
-      // حذف لوکال انجام نمی‌دهیم؛ لیست مجدداً از Store / API خوانده می‌شود.
       await fetchDispatches();
     } catch (error: unknown) {
       throw new Error(getErrorMessage(error));
@@ -542,10 +589,6 @@ export default function VehiclesPageClient({
   return (
     <>
       <div dir="rtl" className="flex flex-col gap-6 font-vazir">
-        {/* =================================================
-            Header
-        ================================================= */}
-
         <header className="flex flex-col gap-5 rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
@@ -560,7 +603,7 @@ export default function VehiclesPageClient({
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl  text-neutral-900 dark:text-white">
+                <h1 className="text-xl text-neutral-900 dark:text-white">
                   مدیریت جامع ناوگان
                 </h1>
 
@@ -570,7 +613,7 @@ export default function VehiclesPageClient({
               </div>
 
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                پایش، تخصیص خودرو به راننده کنترل مأموریت‌ها
+                پایش، تخصیص خودرو به راننده و کنترل مأموریت‌ها
               </p>
             </div>
           </div>
@@ -682,10 +725,6 @@ export default function VehiclesPageClient({
           </div>
         </header>
 
-        {/* =================================================
-            Error
-        ================================================= */}
-
         <AnimatePresence initial={false}>
           {activeError && (
             <motion.div
@@ -721,10 +760,6 @@ export default function VehiclesPageClient({
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* =================================================
-            Tabs
-        ================================================= */}
 
         {activeTab === 'vehicles' && (
           <VehiclesTab
@@ -769,10 +804,6 @@ export default function VehiclesPageClient({
         )}
       </div>
 
-      {/* =====================================================
-          Modals
-      ===================================================== */}
-
       <VehicleFormModal
         isOpen={isVehicleModalOpen}
         initialData={selectedVehicle}
@@ -800,10 +831,6 @@ export default function VehiclesPageClient({
         onSubmit={handleDispatchSubmit}
       />
 
-      {/* =====================================================
-          Delete Vehicle
-      ===================================================== */}
-
       <ConfirmDeleteModal
         isOpen={Boolean(vehiclePendingDelete)}
         title="حذف خودرو"
@@ -821,10 +848,6 @@ export default function VehiclesPageClient({
         </strong>{' '}
         اطمینان دارید؟
       </ConfirmDeleteModal>
-
-      {/* =====================================================
-          Delete Driver
-      ===================================================== */}
 
       <ConfirmDeleteModal
         isOpen={Boolean(driverPendingDelete)}
@@ -846,10 +869,6 @@ export default function VehiclesPageClient({
     </>
   );
 }
-
-/* ============================================================
-   Tab Button
-============================================================ */
 
 interface TabButtonProps {
   active: boolean;
@@ -887,10 +906,6 @@ function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
     </button>
   );
 }
-
-/* ============================================================
-   Delete Modal
-============================================================ */
 
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -955,7 +970,7 @@ function ConfirmDeleteModal({
                 </div>
 
                 <div>
-                  <h2 className="text-base  text-neutral-900 dark:text-white">
+                  <h2 className="text-base text-neutral-900 dark:text-white">
                     {title}
                   </h2>
 

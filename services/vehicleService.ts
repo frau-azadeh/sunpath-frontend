@@ -1,23 +1,29 @@
 import type { CreateVehicleRequest, Vehicle } from '@/types/vehicle';
 
+declare global {
+  interface Window {
+    CONFIG?: {
+      NEXT_PUBLIC_API_BASE?: string;
+    };
+  }
+}
+
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
-    const runtimeConfig = (
-      window as typeof window & {
-        __RUNTIME_CONFIG__?: {
-          API_BASE_URL?: string;
-        };
-      }
-    ).__RUNTIME_CONFIG__;
+    const runtimeApiBase = window.CONFIG?.NEXT_PUBLIC_API_BASE;
 
-    if (runtimeConfig?.API_BASE_URL) {
-      return runtimeConfig.API_BASE_URL.replace(/\/$/, '');
+    if (runtimeApiBase) {
+      return runtimeApiBase.replace(/\/$/, '');
     }
   }
 
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'https://localhost:44341'
-  ).replace(/\/$/, '');
+  const envApiBase = process.env.NEXT_PUBLIC_API_BASE;
+
+  if (envApiBase) {
+    return envApiBase.replace(/\/$/, '');
+  }
+
+  return 'https://localhost:44341';
 };
 
 async function handleResponse<T>(response: Response): Promise<T> {
