@@ -12,6 +12,7 @@ export interface VehicleDispatchInfo {
 export interface Vehicle {
   id: number;
   plateNumber: string;
+  vehicleType?: number | null;
   status: string;
   latitude: number;
   longitude: number;

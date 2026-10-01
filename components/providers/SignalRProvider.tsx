@@ -19,14 +19,18 @@ export default function SignalRProvider({
       await loadVehicles();
 
       if (isMounted) {
-        signalRService.startConnection();
+        await signalRService.startConnection();
       }
     };
 
-    init();
+    void init().catch(error => console.warn('اتصال زنده ناموفق بود؛ تلاش مجدد انجام می‌شود.', error));
+    const retry = window.setInterval(() => {
+      if (isMounted) void signalRService.startConnection().catch(error => console.warn('SignalR reconnect failed:', error));
+    }, 15000);
 
     return () => {
       isMounted = false;
+      window.clearInterval(retry);
       void signalRService.stopConnection();
     };
   }, [loadVehicles]);

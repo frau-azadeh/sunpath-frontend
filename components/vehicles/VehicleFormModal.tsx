@@ -1,6 +1,8 @@
 'use client';
 
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { MotorcyclePlateInput } from './MotorcyclePlateInput';
+import { normalizeVehiclePlate } from '@/lib/plate';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -551,6 +553,7 @@ export function VehicleFormModal({
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
     formState: { errors, isValid },
   } = useForm<VehicleFormInput, unknown, VehicleFormValues>({
@@ -564,16 +567,25 @@ export function VehicleFormModal({
   });
 
   const plateNumber = watch('plateNumber') ?? '';
+  const vehicleType = Number(watch('vehicleType'));
+  const previousVehicleType = useRef(vehicleType);
+  useEffect(() => {
+    if ((previousVehicleType.current === 3) !== (vehicleType === 3)) {
+      setValue('plateNumber', '', { shouldValidate: true, shouldDirty: true });
+    }
+    previousVehicleType.current = vehicleType;
+  }, [vehicleType, setValue]);
 
   const plateComplete = useMemo(() => {
-    return isPlateComplete(parsePlateNumber(plateNumber));
-  }, [plateNumber]);
+    return Boolean(normalizeVehiclePlate(plateNumber, vehicleType));
+  }, [plateNumber, vehicleType]);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
+    previousVehicleType.current = Number(initialData?.vehicleType ?? 0);
     reset(getDefaultValues(initialData));
   }, [initialData, isOpen, reset]);
 
@@ -582,15 +594,15 @@ export function VehicleFormModal({
       return;
     }
 
+    previousVehicleType.current = Number(initialData?.vehicleType ?? 0);
     reset(getDefaultValues(initialData));
 
     onClose();
   };
 
   const handleFormSubmit = async (data: VehicleFormValues) => {
-    const plateParts = parsePlateNumber(data.plateNumber);
 
-    const normalizedPlate = buildPlateNumber(plateParts);
+    const normalizedPlate = normalizeVehiclePlate(data.plateNumber, data.vehicleType);
 
     /*
      * این حالت اصولاً به خاطر disabled بودن دکمه نباید رخ دهد.
@@ -716,14 +728,20 @@ export function VehicleFormModal({
 
               <FormField
                 id="plateNumber"
-                label="شماره پلاک خودرو"
+                label={vehicleType === 3 ? 'شماره پلاک موتورسیکلت' : 'شماره پلاک خودرو'}
                 error={errors.plateNumber?.message}
               >
                 <Controller
                   control={control}
                   name="plateNumber"
                   render={({ field }) => (
-                    <IranianPlateInput
+                    vehicleType === 3 ? <MotorcyclePlateInput
+                      value={typeof field.value === 'string' ? field.value : ''}
+                      disabled={isSubmitting}
+                      hasError={Boolean(errors.plateNumber)}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    /> : <IranianPlateInput
                       value={typeof field.value === 'string' ? field.value : ''}
                       disabled={isSubmitting}
                       hasError={Boolean(errors.plateNumber)}

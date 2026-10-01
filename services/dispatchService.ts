@@ -1,3 +1,6 @@
+import { apiRequest } from '@/lib/api/request';
+import { driverAuthorization } from '@/lib/api/auth';
+import { getApiBaseUrl } from '@/lib/api/base';
 import type { DriverRouteHistory } from '@/components/driver/driver-types';
 import type {
   CreateDispatchRequest,
@@ -12,31 +15,7 @@ type ApiResponse<T> = {
   message?: string;
 };
 
-declare global {
-  interface Window {
-    CONFIG?: {
-      NEXT_PUBLIC_API_BASE?: string;
-    };
-  }
-}
 
-const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    const runtimeApiBase = window.CONFIG?.NEXT_PUBLIC_API_BASE;
-
-    if (runtimeApiBase) {
-      return runtimeApiBase.replace(/\/$/, '');
-    }
-  }
-
-  const envApiBase = process.env.NEXT_PUBLIC_API_BASE;
-
-  if (envApiBase) {
-    return envApiBase.replace(/\/$/, '');
-  }
-
-  return 'https://localhost:44341';
-};
 
 const buildUrl = (path: string): string => {
   return `${getApiBaseUrl()}${path}`;
@@ -80,6 +59,18 @@ const getErrorMessage = async (
 };
 
 export const dispatchService = {
+  accept(id: number): Promise<Dispatch> {
+    return apiRequest<Dispatch>(`/api/dispatches/${id}/accept`, { method: 'POST', headers: driverAuthorization() });
+  },
+  arrive(id: number): Promise<Dispatch> {
+    return apiRequest<Dispatch>(`/api/dispatches/${id}/arrive`, { method: 'POST', headers: driverAuthorization() });
+  },
+  driverStart(id: number): Promise<Dispatch> {
+    return apiRequest<Dispatch>(`/api/dispatches/${id}/driver-start`, { method: 'POST', headers: driverAuthorization() });
+  },
+  driverComplete(id: number): Promise<Dispatch> {
+    return apiRequest<Dispatch>(`/api/dispatches/${id}/driver-complete`, { method: 'POST', headers: driverAuthorization() });
+  },
   async getAll(signal?: AbortSignal): Promise<Dispatch[]> {
     const response = await fetch(buildUrl('/api/dispatches'), {
       method: 'GET',

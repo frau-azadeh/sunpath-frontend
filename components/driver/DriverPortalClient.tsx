@@ -230,6 +230,7 @@ const mapActiveDispatch = (
     vehicleId,
 
     vehiclePlate: getVehiclePlate(vehicle),
+    vehicleType: vehicle?.vehicleType,
 
     vehicleName: getVehicleName(vehicle),
 

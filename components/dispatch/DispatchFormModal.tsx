@@ -1,5 +1,7 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
+import { formatVehiclePlate } from '@/lib/plate';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -784,7 +786,7 @@ function DispatchFormContent({
 
                 {selectedVehicleObj && (
                   <span className="text-[11px] font-normal text-neutral-400">
-                    {selectedVehicleObj.plateNumber}
+                    <VehiclePlate value={selectedVehicleObj.plateNumber} vehicleType={selectedVehicleObj.vehicleType} compact />
                   </span>
                 )}
               </label>
@@ -806,7 +808,7 @@ function DispatchFormContent({
                     value={vehicle.id}
                     className={selectOptionBase}
                   >
-                    {vehicle.plateNumber} - {vehicle.model || 'نامشخص'} -{' '}
+                    {formatVehiclePlate(vehicle.plateNumber, vehicle.vehicleType)} - {vehicle.model || 'نامشخص'} -{' '}
                     {getVehicleTypeLabel(Number(vehicle.vehicleType))}
                   </option>
                 ))}

@@ -27,6 +27,7 @@ const titles: Record<
     title: 'مسیر مأموریت',
     description: 'نمایش مسیر و اطلاعات سفر',
   },
+  history: { title: 'تاریخچه سفرها', description: 'مسیرها و سفرهای تکمیل‌شده' },
   profile: {
     title: 'پروفایل راننده',
     description: 'اطلاعات حساب و تنظیمات',

@@ -1,5 +1,7 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
+import { formatVehiclePlate } from '@/lib/plate';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import dynamic from 'next/dynamic';
@@ -245,7 +247,7 @@ export default function AdminDispatchPage() {
                     <option value="">انتخاب خودرو...</option>
                     {availableVehicles.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {v.plateNumber} - {v.model || 'نامشخص'}
+                        {formatVehiclePlate(v.plateNumber, v.vehicleType)} - {v.model || 'نامشخص'}
                         {v.currentDriverId
                           ? ` — راننده: ${v.currentDriverName || ''}`
                           : ''}
@@ -254,7 +256,7 @@ export default function AdminDispatchPage() {
                   </select>
                   <p className="text-[10px] text-slate-500 mt-1">
                     {selectedVehicle
-                      ? `خودروی انتخابی: ${selectedVehicle.plateNumber}`
+                      ? `خودروی انتخابی: ${formatVehiclePlate(selectedVehicle.plateNumber, selectedVehicle.vehicleType)}`
                       : ''}
                   </p>
                 </div>

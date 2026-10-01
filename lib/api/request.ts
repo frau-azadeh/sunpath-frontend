@@ -1,26 +1,5 @@
 'use client';
-
-const CONFIG_TIMEOUT = 5000;
-const CONFIG_INTERVAL = 50;
-
-const sleep = (milliseconds: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
-
-async function getApiBaseUrl(): Promise<string> {
-  const startedAt = Date.now();
-
-  while (!window.CONFIG?.NEXT_PUBLIC_API_BASE?.trim()) {
-    if (Date.now() - startedAt >= CONFIG_TIMEOUT) {
-      throw new Error('آدرس API پیدا نشد. فایل /config.js را بررسی کنید.');
-    }
-
-    await sleep(CONFIG_INTERVAL);
-  }
-
-  return window.CONFIG.NEXT_PUBLIC_API_BASE.trim().replace(/\/+$/, '');
-}
+import { getApiBaseUrl } from './base';
 
 async function readError(response: Response): Promise<string> {
   const fallback = `خطا در ارتباط با سرور: ${response.status}`;
@@ -109,6 +88,7 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) throw new Error('نشست راننده معتبر نیست؛ دوباره وارد حساب شوید.');
     throw new Error(await readError(response));
   }
 

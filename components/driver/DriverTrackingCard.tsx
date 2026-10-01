@@ -7,7 +7,7 @@ type Props = {
 };
 
 export function DriverTrackingCard({ status }: Props) {
-  const isInProgress = status === 'InProgress';
+  const isInProgress = status === 'Started';
 
   return (
     <section className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">

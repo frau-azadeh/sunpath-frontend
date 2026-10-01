@@ -1,5 +1,6 @@
 'use client';
 
+import { VehiclePlate } from './VehiclePlate';
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -32,12 +33,7 @@ interface VehicleTypeMeta {
   wrapperClassName: string;
 }
 
-interface PlateParts {
-  left: string;
-  letter: string;
-  middle: string;
-  iran: string;
-}
+
 
 type LooseVehicle = Vehicle & Record<string, unknown>;
 
@@ -94,73 +90,15 @@ const vehicleTypeMap: Record<number, VehicleTypeMeta> = {
    Number Helpers
 ========================================================= */
 
-function toEnglishDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
-}
 
-function toPersianDigits(value: string): string {
-  return value.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
-}
+
+
 
 /* =========================================================
    Plate
 ========================================================= */
 
-function parsePlateNumber(value: unknown): PlateParts | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
 
-  const normalized = toEnglishDigits(String(value))
-    .trim()
-    .replace(/ایران/gi, '')
-    .replace(/\s+/g, '')
-    .replace(/[_/\\]/g, '-');
-
-  if (!normalized) {
-    return null;
-  }
-
-  let match = normalized.match(/^(\d{2})([^\d-])(\d{3})-(\d{2})$/);
-
-  if (match) {
-    return {
-      left: match[1],
-      letter: match[2],
-      middle: match[3],
-      iran: match[4],
-    };
-  }
-
-  match = normalized.match(/^(\d{2})([^\d])(\d{3})(\d{2})$/);
-
-  if (match) {
-    return {
-      left: match[1],
-      letter: match[2],
-      middle: match[3],
-      iran: match[4],
-    };
-  }
-
-  const flexible = normalized.match(/(\d{2})([^\d-])(\d{3}).*?(\d{2})$/);
-
-  if (flexible) {
-    return {
-      left: flexible[1],
-
-      letter: flexible[2],
-
-      middle: flexible[3],
-
-      iran: flexible[4],
-    };
-  }
-
-  return null;
-}
 
 /* =========================================================
    Vehicle Helpers
@@ -269,85 +207,7 @@ const isActiveVehicle = (vehicle: Vehicle): boolean => {
    Iranian Plate UI
 ========================================================= */
 
-function VehiclePlate({ value }: { value: unknown }) {
-  const parts = parsePlateNumber(value);
 
-  if (!parts) {
-    const fallback = String(value ?? '').trim();
-
-    return (
-      <div className="space-y-1">
-        <div className="inline-flex min-h-10 min-w-[170px] items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-3 dark:border-neutral-700 dark:bg-neutral-800/60">
-          <span
-            dir="ltr"
-            className="text-xs font-bold text-neutral-500 dark:text-neutral-400"
-          >
-            {fallback || 'پلاک ثبت نشده'}
-          </span>
-        </div>
-
-        {fallback && (
-          <p className="text-[9px] font-medium text-amber-600 dark:text-amber-400">
-            فرمت پلاک قدیمی است
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      dir="ltr"
-      className="inline-flex h-[46px] min-w-[190px] overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md dark:border-neutral-500"
-    >
-      {/* Blue */}
-
-      <div className="flex w-[31px] shrink-0 flex-col items-center justify-between bg-blue-700 px-1 py-1.5 text-white">
-        <span className="text-[8px] leading-none">🇮🇷</span>
-
-        <span className="text-[5px] font-bold leading-none">I.R.</span>
-
-        <span className="text-[5px] font-bold leading-none">IRAN</span>
-      </div>
-
-      {/* First */}
-
-      <div className="flex min-w-[42px] items-center justify-center border-r border-neutral-200 px-1">
-        <span className="text-[16px] font-black text-neutral-900">
-          {toPersianDigits(parts.left)}
-        </span>
-      </div>
-
-      {/* Letter */}
-
-      <div className="flex min-w-[34px] items-center justify-center border-r border-neutral-200 px-1">
-        <span className="text-[17px] font-black text-neutral-900">
-          {parts.letter}
-        </span>
-      </div>
-
-      {/* Middle */}
-
-      <div className="flex min-w-[54px] items-center justify-center border-r border-neutral-200 px-1">
-        <span className="text-[16px] font-black tracking-wide text-neutral-900">
-          {toPersianDigits(parts.middle)}
-        </span>
-      </div>
-
-      {/* Iran */}
-
-      <div className="flex min-w-[43px] flex-col items-center justify-center bg-neutral-50 px-1">
-        <span className="text-[7px] font-bold leading-none text-neutral-600">
-          ایران
-        </span>
-
-        <span className="mt-1 text-[14px] font-black leading-none text-neutral-900">
-          {toPersianDigits(parts.iran)}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 /* =========================================================
    Main
@@ -408,7 +268,7 @@ export function VehicleTableRow({
           </div>
 
           <div className="min-w-0">
-            <VehiclePlate value={rawPlate} />
+            <VehiclePlate value={rawPlate} vehicleType={getVehicleTypeValue(vehicle)} />
 
             <div className="mt-2 flex items-center gap-2">
               <span className="max-w-[130px] truncate text-xs font-semibold text-neutral-700 dark:text-neutral-300">

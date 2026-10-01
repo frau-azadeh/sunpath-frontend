@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { motion } from 'framer-motion';
 import { Loader2, Navigation, Plus, RefreshCw, Search } from 'lucide-react';
@@ -45,6 +45,12 @@ export function DispatchesTab({
   onStatusChange,
 }: Props) {
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    const refresh = () => { void onRefresh().catch(() => {}); };
+    window.addEventListener('sunpath:workflow-updated', refresh);
+    const timer = window.setInterval(refresh, 10000);
+    return () => { window.removeEventListener('sunpath:workflow-updated', refresh); window.clearInterval(timer); };
+  }, [onRefresh]);
 
   const vehicleById = useMemo(
     () => new Map(vehicles.map((vehicle) => [vehicle.id, vehicle])),

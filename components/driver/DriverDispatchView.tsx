@@ -1,3 +1,4 @@
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import {
   BadgeCheck,
   Clock3,
@@ -67,7 +68,7 @@ export function DriverDispatchView({
             <DriverInfoRow
               icon={<Truck size={18} />}
               label="خودرو اختصاص‌یافته"
-              value={`${dispatch.vehicleName} — ${dispatch.vehiclePlate}`}
+              value={<span>{dispatch.vehicleName} — <VehiclePlate value={dispatch.vehiclePlate} vehicleType={dispatch.vehicleType} compact /></span>}
             />
 
             <div className="relative">
@@ -141,7 +142,7 @@ export function DriverDispatchView({
               </button>
             )}
 
-            {dispatch.status === 'InProgress' && (
+            {dispatch.status === 'Started' && (
               <button
                 type="button"
                 onClick={() => void onCompleteDispatch()}

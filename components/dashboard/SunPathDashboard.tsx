@@ -1,5 +1,6 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -364,7 +365,7 @@ export default function SunPathDashboard() {
                   <>
                     <PanelRow
                       label="پلاک"
-                      value={getVehiclePlate(latestVehicle)}
+                      value={<VehiclePlate value={getVehiclePlate(latestVehicle)} vehicleType={latestVehicle.vehicleType} compact />}
                     />
 
                     <PanelRow
@@ -561,7 +562,7 @@ function PanelCard({
 /* Panel Row                                                          */
 /* ------------------------------------------------------------------ */
 
-function PanelRow({ label, value }: { label: string; value: string }) {
+function PanelRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
       <span className="shrink-0 text-sm text-neutral-500 dark:text-neutral-400">
@@ -570,7 +571,7 @@ function PanelRow({ label, value }: { label: string; value: string }) {
 
       <span
         className="min-w-0 truncate text-left text-sm font-medium"
-        title={value}
+        title={typeof value === 'string' ? value : undefined}
       >
         {value}
       </span>

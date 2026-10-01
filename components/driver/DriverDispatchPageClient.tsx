@@ -1,5 +1,8 @@
 'use client';
 
+import { DriverMissionActions } from './DriverMissionActions';
+import { apiRequest } from '@/lib/api/request';
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import {
   type ReactNode,
   useCallback,
@@ -67,12 +70,7 @@ const DriverNavigationMap = dynamic(
 
 type DriverPageTab = 'dispatch' | 'route' | 'history' | 'profile';
 
-type IranianPlateParts = {
-  firstTwo: string;
-  letter: string;
-  middleThree: string;
-  cityTwo: string;
-};
+
 
 /* -------------------------------------------------------------------------- */
 /*                               Mission Mapper                               */
@@ -127,56 +125,6 @@ const toMission = (dispatch: Dispatch | null): ActiveMission | null => {
 /* -------------------------------------------------------------------------- */
 /*                               Number Helpers                               */
 /* -------------------------------------------------------------------------- */
-
-function toEnglishDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
-}
-
-function toPersianDigits(value: string | number): string {
-  return String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                Plate Helpers                               */
-/* -------------------------------------------------------------------------- */
-
-function normalizePlate(value?: string | null): string {
-  if (!value) {
-    return '';
-  }
-
-  return toEnglishDigits(value)
-    .replace(/ي/g, 'ی')
-    .replace(/ك/g, 'ک')
-    .replace(/\s+/g, '')
-    .replace(/_/g, '')
-    .trim();
-}
-
-function parseIranianPlate(value?: string | null): IranianPlateParts | null {
-  const normalized = normalizePlate(value);
-
-  if (!normalized) {
-    return null;
-  }
-
-  const cleaned = normalized.replace(/ایران/g, '').replace(/-/g, '');
-
-  const match = cleaned.match(/^(\d{2})([آ-ی])(\d{3})(\d{2})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  return {
-    firstTwo: match[1],
-    letter: match[2],
-    middleThree: match[3],
-    cityTwo: match[4],
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 /*                              Duration Helper                               */
@@ -400,6 +348,28 @@ export function DriverDispatchPageClient() {
     };
   }, [driver?.driverId]);
 
+  useEffect(() => {
+    if (!driver?.driverId) return;
+    let alive = true; let busy = false;
+    const refresh = async () => {
+      if (!alive || busy) return; busy = true;
+      try {
+        const active = await dispatchService.getActiveForDriver(driver.driverId);
+        if (!alive) return;
+        setDispatch(previous => JSON.stringify(previous) === JSON.stringify(active) ? previous : active);
+        if (active?.vehicleId) {
+          const current = await vehicleService.getById(active.vehicleId);
+          if (alive) setVehicle(current);
+        } else setVehicle(null);
+      } catch { /* The inbox and manual actions display communication errors. */ }
+      finally { busy = false; }
+    };
+    const changed = () => void refresh();
+    window.addEventListener('sunpath:workflow-updated', changed);
+    const timer = window.setInterval(changed, 10000);
+    return () => { alive = false; window.clearInterval(timer); window.removeEventListener('sunpath:workflow-updated', changed); };
+  }, [driver?.driverId]);
+
   /* ---------------------------------------------------------------------- */
   /*                       History Tab Refresh                              */
   /* ---------------------------------------------------------------------- */
@@ -424,17 +394,36 @@ export function DriverDispatchPageClient() {
   /*                           Start Dispatch                               */
   /* ---------------------------------------------------------------------- */
 
+  const handleAccept = async (): Promise<void> => {
+    if (!dispatch) return;
+    setIsSubmitting(true);
+    try { setDispatch(await dispatchService.accept(dispatch.id)); toast.success('مأموریت را قبول کردید؛ به مدیر اطلاع داده شد.'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'پذیرش ناموفق بود.'); }
+    finally { setIsSubmitting(false); }
+  };
+  const handleArrive = async (): Promise<void> => {
+    if (!dispatch) return;
+    setIsSubmitting(true);
+    try { const updated = await dispatchService.arrive(dispatch.id); navigation.stopTracking(); setDispatch(updated); toast.success('رسیدن به مقصد ثبت و برای مدیر اعلام شد.'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'ثبت رسیدن ناموفق بود.'); }
+    finally { setIsSubmitting(false); }
+  };
+
   const handleStart = async (): Promise<void> => {
     if (!dispatch) {
       return;
     }
 
+    if (!window.isSecureContext || !navigator.geolocation) {
+      toast.error('GPS واقعی نیاز به HTTPS معتبر و مجوز موقعیت مکانی دارد. راهنمای اتصال گوشی را بخوانید.');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
-      await dispatchService.updateStatus(dispatch.id, {
-        status: 'Started',
-      });
+      const simulation = await apiRequest<{ running: boolean }>(`/api/simulation/status/${dispatch.vehicleId}`);
+      if (simulation.running) throw new Error('ابتدا شبیه‌سازی این وسیله را از پنل مدیریت متوقف کنید.');
+      await dispatchService.driverStart(dispatch.id);
 
       setDispatch((previous) =>
         previous
@@ -447,7 +436,7 @@ export function DriverDispatchPageClient() {
 
       navigation.startTracking();
 
-      toast.success('مأموریت شروع شد. GPS زنده فعال است.');
+      toast.success('مأموریت شروع شد؛ منتظر دریافت موقعیت GPS باشید.');
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'شروع مأموریت ناموفق بود.',
@@ -477,9 +466,7 @@ export function DriverDispatchPageClient() {
        */
       navigation.stopTracking();
 
-      await dispatchService.updateStatus(completedId, {
-        status: 'Completed',
-      });
+      await dispatchService.driverComplete(completedId);
 
       /*
        * Backend در همین لحظه:
@@ -587,7 +574,7 @@ export function DriverDispatchPageClient() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => toast.info('اعلان جدیدی برای شما وجود ندارد.')}
+                onClick={() => window.dispatchEvent(new Event('sunpath:open-notifications'))}
                 className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300"
               >
                 <Bell size={18} />
@@ -705,8 +692,9 @@ export function DriverDispatchPageClient() {
 
                     {vehicle ? (
                       <div className="mt-3">
-                        <IranianVehiclePlate
-                          plateNumber={vehicle.plateNumber}
+                        <VehiclePlate
+                          value={vehicle.plateNumber}
+                          vehicleType={vehicle.vehicleType}
                         />
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -786,8 +774,9 @@ export function DriverDispatchPageClient() {
                         </p>
 
                         <div className="flex flex-wrap items-center gap-3">
-                          <IranianVehiclePlate
-                            plateNumber={vehicle?.plateNumber}
+                          <VehiclePlate
+                            value={vehicle?.plateNumber}
+                            vehicleType={vehicle?.vehicleType}
                             compact
                           />
 
@@ -893,41 +882,7 @@ export function DriverDispatchPageClient() {
                 error={navigation.gpsError}
               />
 
-              {status === 'assigned' && (
-                <button
-                  type="button"
-                  onClick={() => void handleStart()}
-                  disabled={isSubmitting}
-                  className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 text-base font-bold text-white shadow-lg shadow-orange-600/20 transition hover:bg-orange-700 disabled:opacity-60"
-                >
-                  {isSubmitting ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <>
-                      <Play size={19} fill="currentColor" />
-                      شروع مأموریت و ردیابی
-                    </>
-                  )}
-                </button>
-              )}
-
-              {status === 'in_progress' && (
-                <button
-                  type="button"
-                  onClick={() => void handleComplete()}
-                  disabled={isSubmitting}
-                  className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-base font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {isSubmitting ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <>
-                      <Square size={19} fill="currentColor" />
-                      پایان مأموریت و ثبت عملکرد
-                    </>
-                  )}
-                </button>
-              )}
+              {dispatch && <DriverMissionActions dispatch={dispatch} busy={isSubmitting} onAccept={handleAccept} onStart={handleStart} onArrive={handleArrive} onComplete={handleComplete} />}
             </div>
           ) : (
             /* Route */
@@ -972,39 +927,7 @@ export function DriverDispatchPageClient() {
                   </div>
 
                   <div className="mt-4">
-                    {navigation.isDriving ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleComplete()}
-                        disabled={isSubmitting}
-                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 font-bold text-white disabled:opacity-60"
-                      >
-                        {isSubmitting ? (
-                          <Loader2 size={18} className="animate-spin" />
-                        ) : (
-                          <>
-                            <Square size={18} fill="currentColor" />
-                            توقف و ثبت پایان مأموریت
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleStart()}
-                        disabled={isSubmitting}
-                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white disabled:opacity-60"
-                      >
-                        {isSubmitting ? (
-                          <Loader2 size={18} className="animate-spin" />
-                        ) : (
-                          <>
-                            <Play size={18} fill="currentColor" />
-                            شروع حرکت به سمت مقصد
-                          </>
-                        )}
-                      </button>
-                    )}
+                    {dispatch && <DriverMissionActions dispatch={dispatch} busy={isSubmitting} onAccept={handleAccept} onStart={handleStart} onArrive={handleArrive} onComplete={handleComplete} />}
                   </div>
                 </div>
               </section>
@@ -1308,7 +1231,7 @@ function HistoryCard({
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <IranianVehiclePlate plateNumber={item.vehiclePlate} />
+              <VehiclePlate value={item.vehiclePlate} vehicleType={item.vehicleType} />
 
               <span className="rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-500 shadow-sm dark:bg-neutral-900 dark:text-neutral-400">
                 شناسه خودرو: {item.vehicleId.toLocaleString('fa-IR')}
@@ -1472,83 +1395,7 @@ function HistoryMiniStat({
 /*                            Iranian Plate UI                                */
 /* -------------------------------------------------------------------------- */
 
-function IranianVehiclePlate({
-  plateNumber,
-  compact = false,
-}: {
-  plateNumber?: string | null;
-  compact?: boolean;
-}) {
-  const plate = parseIranianPlate(plateNumber);
 
-  if (!plateNumber) {
-    return (
-      <span className="text-sm font-bold text-neutral-400">پلاک ثبت نشده</span>
-    );
-  }
-
-  if (!plate) {
-    return (
-      <span
-        dir="ltr"
-        className="inline-flex rounded-lg border border-neutral-200 bg-white px-3 py-2 font-mono text-sm font-black tracking-wider text-neutral-800 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-      >
-        {toPersianDigits(plateNumber)}
-      </span>
-    );
-  }
-
-  return (
-    <div
-      dir="ltr"
-      className={`inline-flex max-w-full overflow-hidden rounded-lg border-2 border-neutral-900 bg-white shadow-sm dark:border-neutral-300 ${
-        compact ? 'h-9' : 'h-11'
-      }`}
-    >
-      <div
-        className={`flex shrink-0 flex-col items-center justify-center bg-blue-700 text-white ${
-          compact ? 'w-8' : 'w-10'
-        }`}
-      >
-        <span
-          className={compact ? 'text-[5px] font-bold' : 'text-[6px] font-bold'}
-        >
-          I.R.
-        </span>
-
-        <span
-          className={compact ? 'text-[5px] font-bold' : 'text-[6px] font-bold'}
-        >
-          IRAN
-        </span>
-      </div>
-
-      <div
-        className={`flex items-center whitespace-nowrap font-black text-neutral-950 ${
-          compact ? 'gap-1.5 px-2 text-sm' : 'gap-2 px-3 text-base'
-        }`}
-      >
-        <span>{toPersianDigits(plate.firstTwo)}</span>
-
-        <span>{plate.letter}</span>
-
-        <span>{toPersianDigits(plate.middleThree)}</span>
-      </div>
-
-      <div
-        className={`flex shrink-0 flex-col items-center justify-center border-l border-neutral-400 text-neutral-950 ${
-          compact ? 'min-w-10 px-1' : 'min-w-12 px-2'
-        }`}
-      >
-        <span className={compact ? 'text-[6px]' : 'text-[7px]'}>ایران</span>
-
-        <span className={compact ? 'text-xs font-black' : 'text-sm font-black'}>
-          {toPersianDigits(plate.cityTwo)}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*                              Truck Icon                                    */

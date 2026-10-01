@@ -1,5 +1,7 @@
 'use client';
 
+import { getHubBaseUrl } from '@/lib/api/base';
+
 import * as signalR from '@microsoft/signalr';
 
 import { useMissionStore } from '@/store/useMissionStore';
@@ -24,13 +26,7 @@ class SignalRService {
      Base URL
   ========================================================= */
 
-  private getBaseUrl(): string {
-    if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
-      return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
-    }
-
-    return '';
-  }
+  private getBaseUrl(): string { return getHubBaseUrl(); }
 
   /* =========================================================
      Connection
@@ -48,7 +44,7 @@ class SignalRService {
     }
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${base}/vehicleHub`)
+      .withUrl(`${base}/vehicleHub`, { transport: signalR.HttpTransportType.LongPolling })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(signalR.LogLevel.Information)
       .build();
@@ -200,6 +196,9 @@ class SignalRService {
        VEHICLE UPDATED
     ======================================================= */
 
+    connection.on('VehicleCreated', async () => { await this.reloadVehicles(); });
+    connection.on('VehicleDeleted', async () => { await this.reloadVehicles(); });
+
     connection.on('VehicleUpdated', async (payload: any) => {
       console.log('[SignalR] VehicleUpdated', payload);
 
@@ -293,7 +292,7 @@ class SignalRService {
         this.startPromise = null;
       });
 
-    return this.startPromise;
+    await this.startPromise;
   }
 
   /* =========================================================

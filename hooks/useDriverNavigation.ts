@@ -22,6 +22,7 @@ export interface ActiveMission {
   destinationLng: number;
 
   status: 'assigned' | 'in_progress' | 'completed';
+  arrivedAtUtc?: string | null;
 
   vehicleId: number;
 
@@ -148,6 +149,7 @@ export const toMission = (dispatch: Dispatch | null): ActiveMission | null => {
     destinationLng,
 
     status,
+    arrivedAtUtc: dispatch.arrivedAtUtc,
   };
 };
 
@@ -256,7 +258,7 @@ export function useDriverNavigation(
       efficiencyScore: 100,
     });
 
-    setIsDriving(mission.status === 'in_progress');
+    setIsDriving(mission.status === 'in_progress' && !mission.arrivedAtUtc);
   }, [mission?.id, mission?.originLat, mission?.originLng]);
 
   /*
@@ -267,14 +269,14 @@ export function useDriverNavigation(
       return;
     }
 
-    if (mission.status === 'in_progress') {
+    if (mission.status === 'in_progress' && !mission.arrivedAtUtc) {
       setIsDriving(true);
     }
 
-    if (mission.status === 'completed') {
+    if (mission.status === 'completed' || mission.arrivedAtUtc) {
       setIsDriving(false);
     }
-  }, [mission?.id, mission?.status]);
+  }, [mission?.id, mission?.status, mission?.arrivedAtUtc]);
 
   /*
    * دریافت مسیر برنامه‌ریزی‌شده از OSRM.
@@ -540,7 +542,12 @@ export function useDriverNavigation(
       } catch (error) {
         console.warn('GPS telemetry API error:', error);
 
-        setGpsError('موقعیت دریافت شد اما ارسال آن به سرور ناموفق بود.');
+        const message = error instanceof Error ? error.message : 'موقعیت دریافت شد اما ارسال آن به سرور ناموفق بود.';
+        setGpsError(message);
+        if (message.includes('شبیه‌سازی')) {
+          pendingLocationRef.current = null;
+          setIsDriving(false);
+        }
       } finally {
         sendingRef.current = false;
 
@@ -567,6 +574,12 @@ export function useDriverNavigation(
    */
   useEffect(() => {
     if (!isDriving || !mission) {
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setGpsError('برای GPS گوشی باید صفحه را با HTTPS معتبر باز کنید؛ اتصال HTTP روی IP کافی نیست.');
+      setIsDriving(false);
       return;
     }
 

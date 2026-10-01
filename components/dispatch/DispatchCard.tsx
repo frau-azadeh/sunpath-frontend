@@ -1,5 +1,8 @@
 'use client';
 
+import { workflowLabel } from '@/lib/notifications';
+import { SimulationControls } from './SimulationControls';
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import {
   CheckCircle2,
   Clock,
@@ -169,7 +172,7 @@ export function DispatchCard({
             <span className="font-semibold text-neutral-400">پلاک:</span>
 
             <span dir="ltr" className="font-bold">
-              {vehicle?.plateNumber ?? `خودرو #${dispatch.vehicleId}`}
+              <VehiclePlate value={vehicle?.plateNumber} vehicleType={vehicle?.vehicleType} compact />
             </span>
           </div>
 
@@ -184,7 +187,14 @@ export function DispatchCard({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
+        <div className="mt-3 rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-900">
+        <p className="font-bold">{workflowLabel(dispatch)}</p>
+        {dispatch.acceptedAtUtc && <p className="mt-1 text-neutral-500">زمان پذیرش: {new Date(dispatch.acceptedAtUtc).toLocaleString('fa-IR')}</p>}
+        {dispatch.arrivedAtUtc && <p className="mt-1 text-emerald-600">زمان رسیدن: {new Date(dispatch.arrivedAtUtc).toLocaleString('fa-IR')}</p>}
+      </div>
+      <SimulationControls dispatch={dispatch} />
+
+      <div className="mt-4 flex flex-col gap-2 rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
           <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
             <MapPin size={14} className="shrink-0" />
 
@@ -205,6 +215,13 @@ export function DispatchCard({
         </div>
       </div>
 
+      <div className="mt-3 rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-900">
+        <p className="font-bold">{workflowLabel(dispatch)}</p>
+        {dispatch.acceptedAtUtc && <p className="mt-1 text-neutral-500">زمان پذیرش: {new Date(dispatch.acceptedAtUtc).toLocaleString('fa-IR')}</p>}
+        {dispatch.arrivedAtUtc && <p className="mt-1 text-emerald-600">زمان رسیدن: {new Date(dispatch.arrivedAtUtc).toLocaleString('fa-IR')}</p>}
+      </div>
+      <SimulationControls dispatch={dispatch} />
+
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
         <div className="flex flex-wrap items-center gap-2">
           {onAdd && (
@@ -218,7 +235,7 @@ export function DispatchCard({
             </button>
           )}
 
-          {dispatch.status === 'Assigned' && onStatusChange && (
+          {dispatch.status === 'Assigned' && dispatch.acceptedAtUtc && onStatusChange && (
             <button
               type="button"
               onClick={() => void handleStatusChange('InProgress')}

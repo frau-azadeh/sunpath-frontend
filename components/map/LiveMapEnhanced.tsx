@@ -1,5 +1,7 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
+import { formatVehiclePlate } from '@/lib/plate';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import L from 'leaflet';
@@ -144,7 +146,7 @@ function isActiveDispatch(mission: Dispatch): boolean {
 }
 
 function getVehicleLabel(vehicle: Vehicle | null, mission: Dispatch): string {
-  return vehicle?.plateNumber || `خودرو ${mission.vehicleId}`;
+  return vehicle?.plateNumber ? formatVehiclePlate(vehicle.plateNumber, vehicle.vehicleType) : `وسیله ${mission.vehicleId}`;
 }
 
 /* =========================================================
@@ -317,7 +319,7 @@ function MissionVisualization({ item }: { item: MissionItem }) {
                 {mission.originTitle || 'مبدأ مأموریت'}
               </div>
 
-              <div className="mt-2 text-neutral-500">خودرو: {plate}</div>
+              <div className="mt-2 text-neutral-500">وسیله: <span dir="ltr">{plate}</span></div>
 
               <div className="text-neutral-400">مأموریت #{mission.id}</div>
 
@@ -347,7 +349,7 @@ function MissionVisualization({ item }: { item: MissionItem }) {
                 {mission.destinationTitle || 'مقصد مأموریت'}
               </div>
 
-              <div className="mt-2 text-neutral-500">خودرو: {plate}</div>
+              <div className="mt-2 text-neutral-500">وسیله: <span dir="ltr">{plate}</span></div>
 
               <div className="text-neutral-400">مأموریت #{mission.id}</div>
             </div>
@@ -653,8 +655,7 @@ export default function LiveMapEnhanced() {
               <Navigation size={16} className="text-orange-500" />
 
               <strong className="text-sm">
-                {selectedItem.vehicle.plateNumber ||
-                  `خودرو ${selectedItem.vehicle.id}`}
+                <VehiclePlate value={selectedItem.vehicle.plateNumber} vehicleType={selectedItem.vehicle.vehicleType} compact />
               </strong>
             </div>
 
