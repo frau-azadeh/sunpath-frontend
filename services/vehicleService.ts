@@ -1,30 +1,7 @@
+import { getApiBaseUrl } from '@/lib/api/base';
 import type { CreateVehicleRequest, Vehicle } from '@/types/vehicle';
 
-declare global {
-  interface Window {
-    CONFIG?: {
-      NEXT_PUBLIC_API_BASE?: string;
-    };
-  }
-}
 
-const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    const runtimeApiBase = window.CONFIG?.NEXT_PUBLIC_API_BASE;
-
-    if (runtimeApiBase) {
-      return runtimeApiBase.replace(/\/$/, '');
-    }
-  }
-
-  const envApiBase = process.env.NEXT_PUBLIC_API_BASE;
-
-  if (envApiBase) {
-    return envApiBase.replace(/\/$/, '');
-  }
-
-  return 'https://localhost:44341';
-};
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -77,7 +54,8 @@ export const vehicleService = {
       body: JSON.stringify(data),
     });
 
-    return handleResponse<Vehicle>(response);
+    const result = await handleResponse<{ data: Vehicle }>(response);
+    return result.data;
   },
 
   async update(id: number, data: CreateVehicleRequest): Promise<Vehicle> {
@@ -90,7 +68,8 @@ export const vehicleService = {
       body: JSON.stringify(data),
     });
 
-    return handleResponse<Vehicle>(response);
+    const result = await handleResponse<{ data: Vehicle }>(response);
+    return result.data;
   },
 
   async remove(id: number): Promise<void> {

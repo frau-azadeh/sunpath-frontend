@@ -1,5 +1,6 @@
 'use client';
 
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import type { ReactNode } from 'react';
 
 import { ThemeProvider, useTheme } from 'next-themes';
@@ -40,6 +41,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       {children}
 
       <AppToaster />
+      <NotificationCenter />
     </ThemeProvider>
   );
 }

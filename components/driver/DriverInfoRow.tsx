@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 type Props = {
   icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
   compact?: boolean;
   iconClassName?: string;
 };

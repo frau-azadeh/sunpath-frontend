@@ -16,6 +16,8 @@ export type DriverActiveDispatch = {
 
   vehiclePlate: string;
 
+  vehicleType?: number | null;
+
   vehicleName: string;
 
   originTitle: string;
@@ -89,6 +91,8 @@ export type DriverRouteHistory = {
   vehicleId: number;
 
   vehiclePlate: string | null;
+
+  vehicleType?: number | null;
 
   originTitle: string | null;
 

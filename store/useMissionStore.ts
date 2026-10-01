@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/lib/api/base';
 import { create } from 'zustand';
 
 import type { Dispatch } from '@/types/dispatch';
@@ -26,13 +27,7 @@ interface MissionState {
   clearMissions: () => void;
 }
 
-function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
-    return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
-  }
 
-  return '';
-}
 
 function normalizeList(data: any): Dispatch[] {
   if (Array.isArray(data)) {

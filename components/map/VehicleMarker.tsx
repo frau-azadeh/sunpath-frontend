@@ -1,5 +1,7 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
+import { formatVehiclePlate, escapeHtml } from '@/lib/plate';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import L from 'leaflet';
@@ -48,8 +50,8 @@ export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
         className: 'bg-transparent',
         html: `
           <div class="group relative flex cursor-pointer items-center justify-center">
-            <div class="pointer-events-none absolute -top-7 whitespace-nowrap rounded-md border border-neutral-700]-neutral-900/80 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm backdrop-blur transition-transform group-hover:scale-110">
-              ${vehicle.plateNumber || `خودرو ${vehicle.id}`}
+            <div class="pointer-events-none absolute -top-7 whitespace-nowrap rounded-md border border-neutral-700 bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm backdrop-blur transition-transform group-hover:scale-110">
+              ${escapeHtml(formatVehiclePlate(vehicle.plateNumber, vehicle.vehicleType))}
             </div>
 
             <div
@@ -80,7 +82,7 @@ export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
         iconSize: [34, 34],
         iconAnchor: [17, 17],
       }),
-    [heading, isMoving, isSelected, vehicle.id, vehicle.plateNumber],
+    [heading, isMoving, isSelected, vehicle.id, vehicle.plateNumber, vehicle.vehicleType],
   );
 
   useLayoutEffect(() => {
@@ -106,7 +108,7 @@ export default function VehicleMarker({ vehicle }: VehicleMarkerProps) {
       <Popup closeButton={false}>
         <div className="min-w-[140px] p-1 text-right">
           <p className="mb-1 text-xs font-bold text-neutral-800 dark:text-neutral-100">
-            {vehicle.plateNumber || `شناسه: ${vehicle.id}`}
+            <VehiclePlate value={vehicle.plateNumber} vehicleType={vehicle.vehicleType} compact />
           </p>
 
           <div className="flex justify-between text-[11px] text-neutral-600 dark:text-neutral-300">

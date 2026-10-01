@@ -6,6 +6,8 @@ import type {
 } from './driver-types';
 
 export const mockDriverProfile: DriverProfile = {
+  id: 1,
+  currentVehicle: null,
   fullName: 'حسین مرادی',
   phoneNumber: '۰۹۱۲ ۱۲۳ ۴۵۶۷',
   driverCode: 'DRV-1042',
@@ -17,10 +19,15 @@ export const mockDriverProfile: DriverProfile = {
 
 export const mockDispatch: DriverActiveDispatch = {
   id: 12,
+  vehicleId: 1,
+  originLatitude: null,
+  originLongitude: null,
+  destinationLatitude: null,
+  destinationLongitude: null,
   status: 'Assigned',
   title: 'ارسال بار به شعبه یزد',
   vehicleName: 'کامیونت ایسوزو',
-  vehiclePlate: 'ل ۳۵۵ - ۱۲ ۱۲',
+  vehiclePlate: '12ل355-12',
   originTitle: 'انبار مرکزی تهران',
   destinationTitle: 'شعبه یزد',
   distanceKm: 620,
@@ -38,12 +45,13 @@ export const dispatchStatusConfig: Record<
       'border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
   },
 
-  InProgress: {
+  Started: {
     label: 'در حال انجام',
     className:
       'border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300',
   },
 
+  Cancelled: { label: 'لغوشده', className: 'text-rose-600 bg-rose-50' },
   Completed: {
     label: 'تکمیل‌شده',
     className:

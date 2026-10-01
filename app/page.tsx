@@ -1,5 +1,7 @@
 'use client';
 
+import { workflowLabel } from '@/lib/notifications';
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -137,9 +139,13 @@ export default function SunPathDashboard() {
     };
 
     void loadDispatches();
-
+    const changed = () => void loadDispatches();
+    window.addEventListener('sunpath:workflow-updated', changed);
+    const timer = window.setInterval(changed, 10000);
     return () => {
       mounted = false;
+      window.removeEventListener('sunpath:workflow-updated', changed);
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -285,7 +291,7 @@ export default function SunPathDashboard() {
       return '---';
     }
 
-    return getDispatchStatusLabel(latestDispatch.status);
+    return workflowLabel(latestDispatch);
   }, [latestDispatch]);
 
   const toggleTheme = (): void => {
@@ -455,7 +461,7 @@ export default function SunPathDashboard() {
                     <InfoRow
                       icon={<Car size={15} />}
                       label="خودرو"
-                      value={vehiclePlate}
+                      value={<VehiclePlate value={vehiclePlate} vehicleType={latestDispatchVehicle?.vehicleType} compact />}
                     />
 
                     <InfoRow
@@ -675,7 +681,7 @@ function InfoRow({
 }: {
   icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
@@ -685,7 +691,7 @@ function InfoRow({
         <span className="text-xs">{label}</span>
       </div>
 
-      <p className="truncate text-sm font-medium" title={value}>
+      <p className="truncate text-sm font-medium" title={typeof value === 'string' ? value : undefined}>
         {value}
       </p>
     </div>

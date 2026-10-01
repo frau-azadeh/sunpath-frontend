@@ -1,5 +1,6 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
@@ -844,7 +845,7 @@ export default function VehiclesPageClient({
       >
         آیا از حذف خودرو با پلاک{' '}
         <strong dir="ltr" className="mx-1 text-neutral-900 dark:text-white">
-          {vehiclePendingDelete?.plateNumber}
+          <VehiclePlate value={vehiclePendingDelete?.plateNumber} vehicleType={vehiclePendingDelete?.vehicleType} compact />
         </strong>{' '}
         اطمینان دارید؟
       </ConfirmDeleteModal>

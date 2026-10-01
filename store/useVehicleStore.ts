@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/lib/api/base';
 import { create } from 'zustand';
 
 import type { Vehicle } from '@/types/vehicle';
@@ -38,13 +39,7 @@ interface VehicleState {
   removeVehicle: (id: number | string) => void;
 }
 
-function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.CONFIG?.NEXT_PUBLIC_API_BASE) {
-    return String(window.CONFIG.NEXT_PUBLIC_API_BASE).replace(/\/+$/, '');
-  }
 
-  return '';
-}
 
 function normalizeList(data: unknown): unknown[] {
   if (Array.isArray(data)) {

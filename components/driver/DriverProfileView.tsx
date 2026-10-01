@@ -1,5 +1,6 @@
 'use client';
 
+import { VehiclePlate } from '@/components/vehicles/VehiclePlate';
 import {
   BadgeCheck,
   CalendarDays,
@@ -26,52 +27,9 @@ type Props = {
   historyLoading?: boolean;
 };
 
-type PlateParts = {
-  left: string;
-  letter: string;
-  middle: string;
-  city: string;
-};
-
-const toEnglishDigits = (value: string): string => {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
-};
 
 const toPersianDigits = (value: string | number): string => {
   return String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
-};
-
-const parseIranianPlate = (value?: string | null): PlateParts | null => {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = toEnglishDigits(value)
-    .replace(/ي/g, 'ی')
-    .replace(/ك/g, 'ک')
-    .replace(/[\s_-]+/g, '');
-
-  /*
-   * فرمت canonical:
-   * 12ب345-67
-   *
-   * بعد از حذف خط تیره:
-   * 12ب34567
-   */
-  const match = normalized.match(/^(\d{2})([آ-ی])(\d{3})(\d{2})$/);
-
-  if (!match) {
-    return null;
-  }
-
-  return {
-    left: match[1],
-    letter: match[2],
-    middle: match[3],
-    city: match[4],
-  };
 };
 
 const formatDateTime = (value?: string | null): string => {
@@ -115,53 +73,7 @@ const formatDuration = (durationSeconds: number): string => {
   return `${toPersianDigits(hours)} ساعت و ${toPersianDigits(minutes)} دقیقه`;
 };
 
-function IranianPlate({ value }: { value?: string | null }) {
-  const parts = parseIranianPlate(value);
 
-  if (!value) {
-    return <span className="text-sm text-neutral-400">پلاک ثبت نشده</span>;
-  }
-
-  if (!parts) {
-    return (
-      <span
-        dir="ltr"
-        className="font-mono text-base font-black tracking-wider text-neutral-800 dark:text-neutral-100"
-      >
-        {toPersianDigits(value)}
-      </span>
-    );
-  }
-
-  return (
-    <div
-      dir="ltr"
-      className="inline-flex h-12 overflow-hidden rounded-lg border-2 border-neutral-900 bg-white shadow-sm dark:border-neutral-300"
-    >
-      <div className="flex w-12 flex-col items-center justify-center border-r border-neutral-300 bg-blue-700 px-1 text-white">
-        <span className="text-[7px] font-bold">I.R.</span>
-
-        <span className="text-[8px] font-bold">IRAN</span>
-      </div>
-
-      <div className="flex items-center gap-2 px-3 font-black text-neutral-950">
-        <span className="text-lg">{toPersianDigits(parts.left)}</span>
-
-        <span className="text-lg">{parts.letter}</span>
-
-        <span className="text-lg">{toPersianDigits(parts.middle)}</span>
-      </div>
-
-      <div className="flex min-w-14 flex-col items-center justify-center border-l border-neutral-400 px-2 text-neutral-950">
-        <span className="text-[8px]">ایران</span>
-
-        <span className="text-base font-black">
-          {toPersianDigits(parts.city)}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export function DriverProfileView({
   profile,
@@ -236,7 +148,7 @@ export function DriverProfileView({
                     </div>
                   </div>
 
-                  <IranianPlate value={profile.currentVehicle.plateNumber} />
+                  <VehiclePlate value={profile.currentVehicle.plateNumber} vehicleType={profile.currentVehicle.vehicleType} />
                 </div>
               </div>
             ) : (
@@ -367,7 +279,7 @@ export function DriverProfileView({
                     </div>
                   </div>
 
-                  <IranianPlate value={item.vehiclePlate} />
+                  <VehiclePlate value={item.vehiclePlate} vehicleType={item.vehicleType} />
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-2">

@@ -28,6 +28,10 @@ export interface Dispatch {
 
   createdAtUtc: string;
 
+  acceptedAtUtc?: string | null;
+
+  arrivedAtUtc?: string | null;
+
   startedAtUtc: string | null;
 
   completedAtUtc: string | null;

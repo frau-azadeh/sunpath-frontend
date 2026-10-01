@@ -1,3 +1,4 @@
+import { normalizeVehiclePlate } from '@/lib/plate';
 import { z } from 'zod';
 
 import type { VehicleStatus, VehicleType } from '@/types/vehicle';
@@ -69,6 +70,11 @@ export const vehicleFormSchema = z.object({
     .union([z.coerce.number().int().positive(), z.null()])
     .optional()
     .transform((value) => value ?? null),
+}).superRefine((data, ctx) => {
+  if (!normalizeVehiclePlate(data.plateNumber, data.vehicleType)) ctx.addIssue({
+    code: 'custom', path: ['plateNumber'],
+    message: data.vehicleType === 3 ? 'پلاک موتور باید سه رقم بالا و پنج رقم پایین داشته باشد.' : 'پلاک خودرو باید دو رقم، حرف، سه رقم و کد دو رقمی ایران داشته باشد.',
+  });
 });
 
 export type VehicleFormInput = z.input<typeof vehicleFormSchema>;
